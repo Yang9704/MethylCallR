@@ -1,0 +1,891 @@
+---
+title: "MethylCallR_EWAS_tutorial"
+author: "Hyun-Ho, Yang"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+## Summary
+
+In this example, we show the procedure for performing EWAS using `MethylCallR`.
+
+The data used in this example is public data downloaded from GEO (GEO167202), which consists of EPICv1 data from the peripheral blood of 164 patients with severe acute respiratory syndrome coronavirus 2 (SARS-CoV-2) positive (Cov+) and 296 SARS-CoV-2-negative (Cov-) paricipants (Konigsberg et al., 2021).
+
+## Data preparation
+
+Raw idat files are available on NCBI GEO database (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE167202)
+
+The downloaded raw IDAT files should be unzipped and placed in the same directory. In this example, we assumed that the raw IDAT files were stored in "/user/MethylCallR_Test/GSE167202/".
+
+To import IDAT files, the sample data file should be provided which containing the essential information required to conduct MethylCallR. This file can be found in "MethylCallR/doc/MethylCallR_EWAS_tutorial/MethylCallR_EWAS_tutorial_Files".
+
+We assumed that the sample data file was saved in "/user/MethylCallR_Test/GSE167202/GSE167202_sample_data.csv".
+
+Missing information in the race column has been addressed as the "Other".
+
+```{r Chunk1, include=FALSE}
+pdfile <- read.csv("/user/MethylCallR_Test/GSE167202/GSE167202_sample_data.csv",header=T, row.name=1)
+```
+
+
+```{r Chunk2, include=FALSE}
+head(GSE167202_sample_datafile)
+```
+
+The sample data file should contain columns named "Sample_Name", "Sentrix_ID", and "Sentrix_Position".
+
+Load MethylCallR.
+```{r Chunk3, include=FALSE}
+library(MethylCallR)
+```
+
+## Data Import
+
+The raw IDAT file is imported to R environment using the illuminaio R package (Smith et al., 2013).
+
+```{r Chunk4, include=FALSE}
+data.Import <- MeCall.ReadIdat(idat.dir = "/user/MethylCallR_Test/GSE167202/", pd.file = "/user/MethylCallR_Test/GSE167202_sample_data/GSE167202_sample_data.csv", offset = 100, platform = c("EPICv1"))
+```
+
+`MethylCallR` imports IDAT files based on "Sentrix_ID" and "Sentrix_Position" contained in the sample data file.
+`MeCall.ReadIdat` function returns a list object consisting of various data for quality control and downstream analysis.
+
+```{r Chunk4-1, include=FALSE}
+names(data.Import)
+# [1] "beta"      "M"         "intensity" "Meth"      "Unmeth"    "detP"     
+# [7] "B.count"   "pd"        "TAG"       "minfi.Set"
+
+data.Import$beta[1:4,1:4]
+#           Negative77 Negative124 Positive155 Positive139
+#cg07881041  0.8547360  0.85301706  0.78935308  0.82275386
+#cg23229610  0.8471267  0.84851586  0.80192195  0.83084186
+#cg03513874  0.8452889  0.86455821  0.81212121  0.82727609
+#cg05451842  0.0678950  0.05643739  0.03865146  0.03518307
+
+
+data.Import$B.count[1:4,1:4]
+#           Negative77 Negative124 Positive155 Positive139
+#cg07881041          8          14          16           9
+#cg23229610         21          24          16          14
+#cg03513874         12          19          16          17
+#cg05451842         14          25          13          16
+
+
+data.Import$minfi.Set$rgSet
+#class: RGChannelSet 
+#dim: 1061039 460 
+#metadata(0):
+#assays(2): Green Red
+#rownames(1061039): 1600101 1600111 ... 99810990 99810992
+#rowData names(0):
+#colnames(460): Negative77 Negative124 ... Negative196 Negative101
+#colData names(13): Sample_Name Group ... dir Basename
+#Annotation
+#  array: IlluminaHumanMethylationEPIC
+#  annotation: ilm10b4.hg19
+
+data.Import$minfi.Set$mSet
+#class: MethylSet 
+#dim: 865918 460 
+#metadata(0):
+#assays(2): Meth Unmeth
+#rownames(865918): cg07881041 cg23229610 ... cg24220897 cg12325588
+#rowData names(0):
+#colnames(460): Negative77 Negative124 ... Negative196 Negative101
+#colData names(13): Sample_Name Group ... dir Basename
+#Annotation
+#  array: IlluminaHumanMethylationEPIC
+#  annotation: ilm10b4.hg19
+#Preprocessing
+#  Method: NA
+# minfi version: NA
+#  Manifest version: NA
+```
+
+
+## Quality control
+
+Removing poor-quality samples and probes using the default settings of `MethylCallR`.
+This function contains filtering criteria implemented in the `minfi` and `ChAMP` R packages (Aryee et al., 2014; Tian et al., 2017).
+
+```{r Chunk5, include=FALSE}
+data.filtered <- MeCall.Filtering(data = data.Import, badSample.minfi = TRUE, badSampleCutoff.minfi = 10.5, detectionP = TRUE, detP.probe.cutoff = 0.01, detP.sample.cutoff = 0.1, detP.failed.ratio = 0, beadcount = TRUE, beadcutoff = 0.05, NoCG = TRUE, SNPmask = TRUE, population = "General", Multihit = TRUE, Multihit.method = "WGBS" ,Sexchr = "XY", FLAG = TRUE, hg38.mapfail = TRUE)
+```
+
+`MethylCallR` prints the number of removed probes for each criterion.
+
+```{r Chunk5-1, include=FALSE}
+#[MeCall]-[notice] : The number of samples removed : [6]
+
+#[MeCall]-[notice] : The number of CpGs removed by criteria of detection p-value : [33004]
+#                                                              Bead Count : [17075]
+#                                                              No CG region : [2991]
+#                                                              SNP associated CpGs : [45090]
+#                                                              Multi-Hit CpGs : [9184]
+#                                                              Sex chromosome CpGs : [19627]
+#                                                              FLAGed CpGs : [990]
+#                                                              GRCh38/hg38 Mapping failed CpGs : [38]
+#
+#[MeCall]-[notice] : Total number of filtered out CpGs : [106725]
+#
+#[MeCall]-[notice] : Total number of remained samples : [454]
+#                                    remained CpGs : [759193]
+```
+
+Similar to the `MeCall.Import` function, this function returns a list object containing various object, including the name of removed samples and probes.
+
+```{r Chunk5-2, include=FALSE}
+names(data.filtered)
+# [1] "beta"                 "M"                    "intensity"           
+# [4] "Meth"                 "Unmeth"               "pd"                  
+# [7] "TAG"                  "minfi.Set"            "filtered.Sample.list"
+#[10] "filtered.CpG.list" 
+
+str(data.filtered$filtered.Sample.list)
+# chr [1:6] "Negative84" "Negative176" "Negative175" "Negative78" ...
+
+str(data.filtered$filtered.CpG.list)
+#List of 9
+# $ detectP          : chr [1:33004] "cg25552317" "cg15743833" "cg18160831" "cg12409226" ...
+# $ B.count          : chr [1:17075] "cg25578048" "cg20636249" "cg18370407" "cg06933777" ...
+# $ NoCG             : chr [1:2991] "ch.4.37949012R" "ch.17.4249285F" "ch.7.2860922R" "ch.5.44854267F" ...
+# $ SNP.associated   : chr [1:45090] "cg25458538" "cg07393050" "cg25706713" "cg19006848" ...
+# $ Multi.hit        : chr [1:9184] "cg15323066" "cg21277889" "cg10283879" "cg13793478" ...
+# $ Sex.chromosome   : chr [1:19627] "cg09835024" "cg25813447" "cg07779434" "cg07393050" ...
+# $ FLAG             : chr [1:990] "cg12826529" "cg05867750" "cg11712896" "cg24923412" ...
+# $ hg38.mapping.fail: chr [1:38] "cg20336016" "cg01238044" "cg15460135" "cg05380919" ...
+# $ Duplicated.probes: NULL
+
+dim(data.filtered$beta)
+#[1] 759193    454
+```
+
+
+## Normalization
+
+Normalization was conducted using beta-mixture quantile normalization (BMIQ) (Teschendorff et al., 2013). Since the probes on the sex chromosomes were removed, `InterpolatedXY` parameter was set to `FALSE` (Wang et al., 2022).
+
+```{r Chunk6, include=FALSE}
+data.norm <- MeCall.Norm(data = data.filtered, method = c("BMIQ"), InterpolatedXY = FALSE, offset = 100, return.type = "B")
+```
+
+```{r Chunk6-1, include=FALSE}
+dim(data.norm)
+#[1] 759193    454
+
+data.norm[1:4,1:4]
+#           Negative77 Negative124 Positive155 Positive139
+#cg07881041 0.95780049  0.94945522  0.94256803  0.95737970
+#cg23229610 0.95285808  0.94637172  0.95026121  0.96198183
+#cg03513874 0.95163018  0.95703370  0.95613325  0.95998327
+#cg05451842 0.04149115  0.03163426  0.02096449  0.01548571
+```
+
+
+## Outlier detection
+
+Potential outliers for each group were detected by using the Mahalanobis distance (Mahalanobis, 1936). The `Plot` parameter was set to `TRUE` to save the PCA plot, which visualizes sample distribution and the boundary of outlier.
+
+```{r Chunk7, include=FALSE}
+Outlier <- MeCall.Outlier(meth = data.norm, pd = data.filtered$pd, group = "Group", nrep = 1000, sample.fraction = 0.9, conf = 0.999, n.component = 2,  plot=TRUE)
+```
+
+Since 2 samples were detected as outlier in a high ratio (> 20%), these samples were designated as the "Obvious outlier"
+
+```{r Chunk7-1, include=FALSE}
+Outlier$Outlier.Probability
+# Negative.Negative16  Negative.Negative31 Positive.Positive115 
+#                90.9                  1.3                  0.3 
+#Positive.Positive125 
+#                92.2 
+
+Outlier$Obvious.outlier
+#     Negative      Positive 
+# "Negative16" "Positive125" 
+
+# Outlier plot was genrated based on the ggplot2 R package (Wickham, 2009).
+Outlier$Plot
+```
+
+Downstream analyses were performed after removing 2 outliers.
+
+```{r Chunk8, include=FALSE}
+Remaineds <- setdiff(colnames(data.norm), Outlier[[1]])
+data.filtered$pd <- data.filtered$pd[Remaineds,]
+data.norm <- data.norm[,Remaineds]
+```
+
+
+## Identification of batch effect
+
+The effect of batches and covariates on DNA methylation can be assessed by estimating the correlation between DNA methylation data and variables in the sample data file. This function returns heatmap plot based on the `ggplot2` R package (Wickham, 2009).
+
+```{r Chunk9, include=FALSE}
+data.Heatmap <- MeCall.FindBatch(meth = data.norm, pd = data.filtered$pd, batches = NULL, n.comp = 0)
+```
+
+The significant correlations were highlighted as blue tiles. Darker blue tiles indicate a lower p-value. Spearman's correlation coefficient was represented at the center of each tile.
+
+```{r Chunk9-1, include=FALSE}
+data.Heatmap
+```
+
+In this exmaple, silde and array were set as technical batches, while age, sex, and race were set as covariates.
+
+
+## Controlling batch effect
+
+Known technical batch effects could be addressed using the `ComBat` algorithm (Johnson et al., 2007).
+
+```{r Chunk10, include=FALSE}
+data.filtered$pd$Sentrix_ID_Original <- as.factor(data.filtered$pd$Sentrix_ID_Original)
+data.filtered$pd$Sentrix_Position_original <- as.factor(data.filtered$pd$Sentrix_Position_original)
+
+data.combat <- MeCall.RemoveBatch(meth = data.norm, pd = data.filtered$pd, batches=c("Sentrix_Position_original","Sentrix_ID_Original"), interest="Group", do.sva= FALSE, exception = NULL)
+```
+
+```{r Chunk10-1, include=FALSE}
+data.combat$methylation.level[1:4,1:4]
+#           Negative77 Negative124 Positive155 Positive139
+#cg07881041  0.9451347  0.94266940  0.93822340  0.95588747
+#cg23229610  0.9626767  0.96166345  0.95126703  0.95912504
+#cg03513874  0.9544076  0.95643175  0.95351082  0.95262966
+#cg05451842  0.0311205  0.02778014  0.02337927  0.01937273
+```
+
+## Estimation of white blood cell composition
+
+`FlowSorted.EPIC.Blood` R package requires the `RGChannelSet` to estimate white blood cell composition (Salas et al., 2018). The `RGChannelSet` containing samples for downstream analysis canbe easily generated using a helper function implemented in `MethylCallR` (`rmFailedSample`).
+
+```{r Chunk11, include=FALSE}
+Ori_Remain <- data.filtered$pd$Sample_Name
+data.filtered$minfi.Set$rgSet <- rmFailedSample(data.filtered$minfi.Set$rgSet,Ori_Remain)
+```
+
+```{r Chunk11-1, include=FALSE}
+data.filtered$minfi.Set$rgSet
+#class: RGChannelSet 
+#dim: 1061039 452 
+#metadata(0):
+#assays(2): Green Red
+#rownames(1061039): 1600101 1600111 ... 99810990 99810992
+#rowData names(0):
+#colnames(452): Negative77 Negative124 ... Negative196 Negative101
+#colData names(13): Sample_Name Group ... dir Basename
+#Annotation
+#  array: IlluminaHumanMethylationEPIC
+#  annotation: ilm10b4.hg19
+```
+
+Since the DNA methylation data in this example came from peripheral blood, the composition of 6 types of white blood cell was estimated and included as  covariates.
+
+In this example, the DNA methylation data adjusted for cell composition was returned by setting the `adjust` parameter to `TRUE`. 
+In the case of EPICv2 data, the estimation of cell composition will be performed after converting EPICv2 data into EPICv1 based on the `address chain file` generated by `MeCall.SetChainFile()`.
+
+```{r Chunk12, include=FALSE}
+data.cellcomp <- MeCall.CellComp(data = data.filtered, meth = data.combat$methylation.level, processMethod = "preprocessNoob", CellType = "Blood", adjust = TRUE, return.All=TRUE, arraytype = "EPICv1")
+```
+
+```{r Chunk12-1, include=FALSE}
+data.cellcomp$adjusted.meth[1:4,1:4]
+#           Negative77 Negative124 Positive155 Positive139
+#cg07881041 0.93909807  0.93182334  0.94243627  0.95499605
+#cg23229610 0.96092417  0.95973960  0.95491944  0.95969753
+#cg03513874 0.95053255  0.95365791  0.95415862  0.95281086
+#cg05451842 0.03154395  0.02753809  0.02249581  0.01948213
+
+
+head(data.cellcomp$cell.prop)
+#              CD8T   CD4T     NK  Bcell   Mono    Neu
+#Negative77  0.0854 0.1008 0.0215 0.0400 0.0403 0.7460
+#Negative124 0.1791 0.0430 0.0491 0.0345 0.0525 0.6908
+#Positive155 0.0759 0.1369 0.0464 0.0918 0.0566 0.6173
+#Positive139 0.0664 0.0723 0.0457 0.0464 0.0478 0.7452
+#Negative295 0.1084 0.1495 0.0986 0.0466 0.1568 0.4602
+#Positive157 0.1207 0.0611 0.0482 0.0768 0.0875 0.6199
+```
+
+
+## Considering covariates for EWAS
+
+A model matrix was generated to consider covariates before conducting the differential methylation analysis.
+
+```{r Chunk13, include=FALSE}
+design <- MeCall.MakeModelMatrix(pd = data.combat$modified.pd, covariate = c("Age","Sex","Race"), PCA.result = NULL, Cell.comp = NULL,interest="Group")
+```
+
+```{r Chunk13-1, include=FALSE}
+dim(design)
+#[1] 452   9
+
+head(design)
+#            (Intercept) Age SexMale RaceAsian RaceBlackorAA
+#Negative77            1  27       0         0             0
+#Negative124           1  34       1         0             0
+#Positive155           1  53       0         0             0
+#Positive139           1  34       0         0             0
+#Negative295           1  68       1         0             1
+#Positive157           1  81       0         0             0
+#            RaceNativeHawaiianorPacificIslander RaceOther RaceWhite
+#Negative77                                    0         0         1
+#Negative124                                   0         1         0
+#Positive155                                   0         1         0
+#Positive139                                   0         1         0
+#Negative295                                   0         0         0
+#Positive157                                   0         0         1
+#            GroupPositive
+#Negative77              0
+#Negative124             0
+#Positive155             1
+#Positive139             1
+#Negative295             0
+#Positive157             1
+```
+
+
+## Epigenome-wide association study (EWAS)
+
+Differential methylation probes(DMPs) were identified by using the `limma` R package  (Ritchie et al., 2015).
+
+```{r Chunk14, include=FALSE}
+DMPs <- MeCall.DMP(meth = data.cellcomp$adjusted.meth, pd = data.combat$modified.pd, design = design, cutoff.P = 1, multi.P = "BH", arraytype = c("EPICv1"),interest="Group")
+```
+
+```{r Chunk14-1, include=FALSE}
+dim(DMPs@Main.info)
+#[1] 759193     15
+
+head(DMPs@Main.info)
+#                CpGid   Chr  Position strand   gene functional.region
+#cg17114584 cg17114584 chr11    613792      +   IRF7              Body
+#cg03753191 cg03753191 chr13  42992766      - EPSTI1           TSS1500
+#cg22930808 cg22930808  chr3 122563034      +  PARP9             5'UTR
+#cg07878065 cg07878065 chr18   2641872      +                         
+#cg23299102 cg23299102  chr7  36456313      -                         
+#cg11251971 cg11251971  chr5 140207441      - CYSTM1              Body
+#           CGI.region   deltabeta         t            p   adjusted.p
+#cg17114584    N_Shore -0.17207437 -17.68140 2.288124e-53 1.737127e-47
+#cg03753191    S_Shore -0.04684373 -16.23612 6.967374e-47 2.644791e-41
+#cg22930808    N_Shore -0.18264475 -15.95535 1.224126e-45 3.097825e-40
+#cg07878065            -0.03587083 -13.61695 1.541443e-35 2.925632e-30
+#cg23299102            -0.11942096 -13.52878 3.608801e-35 5.479554e-30
+#cg11251971            -0.08577132 -13.21059 7.626758e-34 8.625574e-29
+#              AveMeth         B                                          SNP_ID
+#cg17114584 0.51540956 109.83978  rs59115876;rs557367492;rs574101679;rs542925396
+#cg03753191 0.07527500  94.93442 rs542535202;rs562096060;rs545853029;rs541269458
+#cg22930808 0.47426288  92.07382             rs186642026;rs111503129;rs188056684
+#cg07878065 0.04953807  68.87870               rs118025086;rs7229070;rs532509879
+#cg23299102 0.48164781  68.03096                                     rs186299948
+#cg11251971 0.46089704  64.99100                         rs554753611;rs187243622
+#           SNP_DISTANCE
+#cg17114584   37;25;20;2
+#cg03753191   0;15;23;33
+#cg22930808      51;37;2
+#cg07878065      35;15;1
+#cg23299102            1
+#cg11251971        15;49
+```
+
+To control type 2 error, selecting the appropriate delta-beta cutoff is important for the given study conditions.
+By performing statistical power estimation, it might be helpful to find appropriate delta-beta cutoff.
+`MethylCallR` uses `pwrEWAS` R package to estimate statistical power (Graw et al., 2019).
+Note that it is a time-consuming process due to the simulation.
+If the `DeltaBeta` parameter is set to `NULL`, `MethylCallR` automatically sets the `DeltaBeta` parameter for simulation to 0.02, 0.05, 0.07, and 0.1.
+
+```{r Chunk15, include=FALSE}
+data.POWER <-MeCall.Power(DMP.object = DMPs, tissue.type = "Adult (PBMC)", pd = data.combat$modified.pd, interest = "Group", FDR = 0.05, DeltaBeta = NULL, save.plot = "/user/MethylCallR_Test/GSE167202_sample_data/Result/")
+```
+
+```{r Chunk15-1, include=FALSE}
+#[2024-07-22 22:07:02.353906] Finding tau...done [2024-07-22 22:17:48.15922]
+#[1] "The following taus were chosen: 0.00390625, 0.01171875, 0.017578125, 0.02734375"
+#[2024-07-22 22:17:48.159692] Running simulation
+#  |======================================================================| 100%
+#[2024-07-22 22:17:48.159692] Running simulation ... done [2024-07-23 18:48:53.38054]
+```
+
+```{r Chunk15-2, include=FALSE}
+data.POWER$meanPower
+#         0.02      0.05      0.07       0.1
+#422 0.3079812 0.8145463 0.8629266 0.9030929
+#432 0.3095463 0.8194789 0.8645108 0.9040548
+#442 0.3111268 0.8227555 0.8675357 0.9084253
+#452 0.3140065 0.8247158 0.8706667 0.9087430
+#462 0.3150485 0.8289812 0.8728279 0.9110125
+#472 0.3174355 0.8313123 0.8750236 0.9118753
+#482 0.3204497 0.8351364 0.8768675 0.9141402
+
+# If the user sets directory path to the `save.plot` parameter, a line plot representing the result of power estimation will be saved as "EWAS_Power_plot_pwrEWAS.pdf" in the directory.
+powerplot
+```
+
+Since the delta-beta with a statistical power of above 80% was 0.05, the criteria for delta-beta was set to be 0.05.
+In summary, the criteria for significant DMPs were FDR < 0.05 and |delta-beta| > 0.05.
+
+```{r Chunk16, include=FALSE}
+Sig.DMPs <- subset(DMPs@Main.info, adjusted.p < 0.05)
+Sig.DMPs <- subset(Sig.DMPs, deltabeta < -0.05 | deltabeta > 0.05)
+```
+
+```{r Chunk16-1, include=FALSE}
+dim(Sig.DMPs)
+# [1] 144  15
+head(Sig.DMPs)
+#                CpGid   Chr  Position strand   gene functional.region
+#cg17114584 cg17114584 chr11    613792      +   IRF7              Body
+#cg22930808 cg22930808  chr3 122563034      +  PARP9             5'UTR
+#cg23299102 cg23299102  chr7  36456313      -                         
+#cg11251971 cg11251971  chr5 140207441      - CYSTM1              Body
+#cg21995613 cg21995613  chr8 143025505      -                         
+#cg21587506 cg21587506 chr10  89332405      +  IFIT3            TSS200
+#           CGI.region   deltabeta         t            p   adjusted.p
+#cg17114584    N_Shore -0.17207437 -17.68140 2.288124e-53 1.737127e-47
+#cg22930808    N_Shore -0.18264475 -15.95535 1.224126e-45 3.097825e-40
+#cg23299102            -0.11942096 -13.52878 3.608801e-35 5.479554e-30
+#cg11251971            -0.08577132 -13.21059 7.626758e-34 8.625574e-29
+#cg21995613    S_Shore -0.06971069 -13.20620 7.953053e-34 8.625574e-29
+#cg21587506            -0.06146935 -13.15267 1.324705e-33 1.257134e-28
+#              AveMeth         B                                         SNP_ID
+#cg17114584 0.51540956 109.83978 rs59115876;rs557367492;rs574101679;rs542925396
+#cg22930808 0.47426288  92.07382            rs186642026;rs111503129;rs188056684
+#cg23299102 0.48164781  68.03096                                    rs186299948
+#cg11251971 0.46089704  64.99100                        rs554753611;rs187243622
+#cg21995613 0.77608847  64.94926                                               
+#cg21587506 0.09707474  64.44095                                    rs139036342
+#           SNP_DISTANCE
+#cg17114584   37;25;20;2
+#cg22930808      51;37;2
+#cg23299102            1
+#cg11251971        15;49
+#cg21995613             
+#cg21587506            1
+```
+
+
+## Summary plot of EWAS
+
+EWAS result can be summrized using `ggplot2` R pacakge through `MeCall.Plot` function (Wickham, 2009).
+In the Manhattan plot, multiple probe sets can be highlighted by providing a list object containing probe IDs to highlight. In this example, 3 probe sets were highlighted in the Manhattan plot. 
+
+[1] Probe IDs of significant DMPs
+```{r Chunk17, include=FALSE}
+Significant_DMPs <- rownames(Sig.DMPs)
+```
+
+[2] Probe IDs of Top 20 DMPs among the significant DMPs
+```{r Chunk18, include=FALSE}
+Top20_DMPs <- rownames(Sig.DMPs[1:20,])
+```
+
+[3] Probe IDs of DMPs annotated with gene link to SARS-CoV-2 infection among the Top 20 DMPs. SARS-CoV-2 infection related genes were founded in the google scalar.
+```{r Chunk19, include=FALSE}
+COV_genes <- c("IRF7", "PARP9", "MX1", "CYSTM1", "CMPK2", "IFI27", "ADAR", "TRIM22", "IFIT3", "OAS1")
+COV_related <- rownames(subset(Sig.DMPs[1:20,], gene %in% COV_genes))
+```
+
+```{r Chunk20, include=FALSE}
+# [1] + [2] + [3]
+highlight_lists = list(Significant_DMPs = Significant_DMPs, Top20_DMPs = Top20_DMPs, COVID19_related_gene_in_Top20 = COV_related)
+```
+
+Gene names can be labeled by providing probe IDs of interest. In this example, gene names associated with the top 20 DMPs were labeled.
+
+```{r Chunk21, include=FALSE}
+gene_labeling <- Top20_DMPs
+```
+
+Generating the Manhattan plot based on the EWAS result.
+```{r Chunk22, include=FALSE}
+Manhattan_plot <- MeCall.Plot(data = DMPs, type = c("Manhattan"), pd= data.combat$modified.pd, Pval.cut = 0.05, highlight=highlight_lists, highlight.color = c("green","blue","red"),gene.label = gene_labeling)
+```
+
+```{r Chunk22-1, include=FALSE}
+print(Manhattan_plot)
+```
+
+Generating the Volcano plot. Gene names can be labeled the same as in the Manhattan plot. 
+The delta-beta cutoff, based on the statistical power estimation, was indicated by dark grey vertical lines.
+
+```{r Chunk23, include=FALSE}
+Volcano_plot <- MeCall.Plot(data = DMPs, type = c("Volcano"), pd= data.combat$modified.pd, Pval.cut = 0.05, delta.cut = c(-0.05,0.05),gene.label = gene_labeling)
+```
+
+```{r Chunk23-1, include=FALSE}
+print(Volcano_plot)
+```
+
+
+## Functional enrichment analysis
+
+To identify which gene set is over-represented in the gene list associated with DMPs, functional enrichment analysis can be performed using the `gometh` algorithm (Maksimovic et al., 2021).
+`MethylCallR` returns a summarized data frame object containing significantly over-represented gene sets based on the gene ontology (GO) and kyoto encyclopedia of genes and genomes (KEGG) databases (Ashburner et al., 2000; Kanehisa and Goto, 2000).
+```{r Chunk24, include=FALSE}
+data.Enrich <- MeCall.Enrichment(DMP.object = DMPs, DMP.cutoff = 0.05, DMP.multi = "BH", Delta.Beta = c(-0.05,0.05), genomic.features = c("ALL"), Enrich.cutoff = 0.05, Enrich.multi = c("BH"),min.count = 2)
+```
+
+```{r Chunk24-1, include=FALSE}
+dim(data.Enrich)
+# [1] 21  8
+
+head(data.Enrich)
+#               Category         ID                        Description
+#1 GO-Biological Process GO:0051607          defense response to virus
+#2 GO-Biological Process GO:0140546       defense response to symbiont
+#3 GO-Biological Process GO:0009615                  response to virus
+#4 GO-Biological Process GO:0098542 defense response to other organism
+#5 GO-Biological Process GO:0034340      response to type I interferon
+#6 GO-Biological Process GO:0051707         response to other organism
+#  Gene_in_description Gene_Count      p_value          FDR
+#1                 321         13 8.111487e-10 9.257461e-06
+#2                 322         13 8.196432e-10 9.257461e-06
+#3                 419         13 3.030176e-08 2.281621e-04
+#4                1135         18 7.506173e-07 4.238923e-03
+#5                  84          6 1.142164e-06 5.160068e-03
+#6                1437         20 2.274628e-06 7.449845e-03
+#                                                                                                           Significant_gene
+#1                                         ADAR,TRIM22,IFI44L,DTX3L,IFI27,IFIT3,IRF7,MX1,OAS1,PLSCR1,TRIM34,PARP9,RSAD2,AIM2
+#2                                         ADAR,TRIM22,IFI44L,DTX3L,IFI27,IFIT3,IRF7,MX1,OAS1,PLSCR1,TRIM34,PARP9,RSAD2,AIM2
+#3                                         ADAR,TRIM22,IFI44L,DTX3L,IFI27,IFIT3,IRF7,MX1,OAS1,PLSCR1,TRIM34,PARP9,RSAD2,AIM2
+#4              ADAR,TRIM22,IFI44L,DTX3L,FLNB,LYG2,GFI1,GSDMA,IFI27,IFIT3,IRF7,MX1,OAS1,PLSCR1,TRIM34,PARP9,RSAD2,AIM2,HDAC4
+#5                                                                                            ADAR,IFI27,IRF7,MX1,OAS1,HDAC4
+#6 ADAR,TRIM22,IFI44L,CMPK2,DTX3L,FLNB,LYG2,GFI1,GSDMA,IFI27,IFIT3,IRF7,MX1,OAS1,PLSCR1,TRIM34,PARP9,RSAD2,AIM2,SCARB1,HDAC4
+
+```
+
+
+## References
+Aryee,M.J. et al. (2014) Minfi: a flexible and comprehensive Bioconductor package for the analysis of Infinium DNA methylation microarrays. Bioinformatics, 30, 1363–1369.
+
+Ashburner,M. et al. (2000) Gene Ontology: tool for the unification of biology. Nat. Genet., 25, 25–29.
+
+Graw,S. et al. (2019) pwrEWAS: a user-friendly tool for comprehensive power estimation for epigenome wide association studies (EWAS). BMC Bioinformatics, 20, 218.
+
+Johnson,W.E. et al. (2007) Adjusting batch effects in microarray expression data using empirical Bayes methods. Biostatistics, 8, 118–127.
+
+Kanehisa,M. and Goto,S. (2000) KEGG: Kyoto Encyclopedia of Genes and Genomes. Nucleic Acids Res., 28, 27–30.
+
+Konigsberg,I.R. et al. (2021) Host methylation predicts SARS-CoV-2 infection and clinical outcome. Commun. Med., 1, 1–10.
+
+Mahalanobis,P.C. (1936) On the generalized distance in Statistics.
+Maksimovic,J. et al. (2021) Gene set enrichment analysis for genome-wide DNA methylation data. Genome Biol., 22, 173.
+
+Ritchie,M.E. et al. (2015) limma powers differential expression analyses for RNA-sequencing and microarray studies. Nucleic Acids Res., 43, e47.
+
+Salas,L.A. et al. (2018) An optimized library for reference-based deconvolution of whole-blood biospecimens assayed using the Illumina HumanMethylationEPIC BeadArray. Genome Biol., 19, 64.
+
+Smith,M.L. et al. (2013) illuminaio: An open source IDAT parsing tool for Illumina microarrays. F1000Research, 2, 264.
+
+Teschendorff,A.E. et al. (2013) A beta-mixture quantile normalization method for correcting probe design bias in Illumina Infinium 450 k DNA methylation data. Bioinformatics, 29, 189–196.
+
+Tian,Y. et al. (2017) ChAMP: updated methylation analysis pipeline for Illumina BeadChips. Bioinformatics, 33, 3982–3984.
+
+Wang,Y. et al. (2022) InterpolatedXY: a two-step strategy to normalize DNA methylation microarray data avoiding sex bias. Bioinformatics, 38, 3950–3957.
+
+Wickham,H. (2009) ggplot2: Elegant Graphics for Data Analysis Springer, New York, NY.
+
+
+## Sessioninfo
+```{r Chunk25, include=FALSE}
+> sessionInfo()
+#R version 4.3.3 (2024-02-29)
+#Platform: x86_64-pc-linux-gnu (64-bit)
+#Running under: Ubuntu 20.04.6 LTS
+
+#Matrix products: default
+#BLAS:   /usr/lib/x86_64-linux-gnu/blas/libblas.so.3.9.0 
+#LAPACK: /usr/lib/x86_64-linux-gnu/lapack/liblapack.so.3.9.0
+
+#locale:
+# [1] LC_CTYPE=en_US.UTF-8       LC_NUMERIC=C              
+# [3] LC_TIME=en_US.UTF-8        LC_COLLATE=en_US.UTF-8    
+# [5] LC_MONETARY=en_US.UTF-8    LC_MESSAGES=en_US.UTF-8   
+# [7] LC_PAPER=en_US.UTF-8       LC_NAME=C                 
+# [9] LC_ADDRESS=C               LC_TELEPHONE=C            
+#[11] LC_MEASUREMENT=en_US.UTF-8 LC_IDENTIFICATION=C       
+
+#time zone: Asia/Seoul
+#tzcode source: system (glibc)
+
+#attached base packages:
+#[1] parallel  stats4    stats     graphics  grDevices utils     datasets 
+#[8] methods   base     
+
+#other attached packages:
+# [1] MethylCallR_0.0.0.9000                             
+# [2] IlluminaHumanMethylationEPICanno.ilm10b4.hg19_0.6.0
+# [3] IlluminaHumanMethylationEPICmanifest_0.3.0         
+# [4] FlowSorted.Blood.EPIC_2.6.0                        
+# [5] ExperimentHub_2.10.0                               
+# [6] AnnotationHub_3.10.1                               
+# [7] BiocFileCache_2.10.2                               
+# [8] dbplyr_2.5.0                                       
+# [9] minfi_1.48.0                                       
+#[10] bumphunter_1.44.0                                  
+#[11] locfit_1.5-9.9                                     
+#[12] iterators_1.0.14                                   
+#[13] foreach_1.5.2                                      
+#[14] Biostrings_2.70.3                                  
+#[15] XVector_0.42.0                                     
+#[16] SummarizedExperiment_1.32.0                        
+#[17] Biobase_2.62.0                                     
+#[18] MatrixGenerics_1.14.0                              
+#[19] matrixStats_1.3.0                                  
+#[20] GenomicRanges_1.54.1                               
+#[21] GenomeInfoDb_1.38.8                                
+#[22] IRanges_2.36.0                                     
+#[23] S4Vectors_0.40.2                                   
+#[24] BiocGenerics_0.48.1                                
+#[25] devtools_2.4.5                                     
+#[26] usethis_2.2.3                                      
+
+#loaded via a namespace (and not attached):
+#  [1] R.methodsS3_1.8.2                                 
+#  [2] dichromat_2.0-0.1                                 
+#  [3] progress_1.2.3                                    
+#  [4] urlchecker_1.0.1                                  
+#  [5] RPMM_1.25                                         
+#  [6] nnet_7.3-19                                       
+#  [7] shinythemes_1.2.0                                 
+#  [8] kpmt_0.1.0                                        
+#  [9] HDF5Array_1.30.1                                  
+# [10] vctrs_0.6.5                                       
+# [11] proxy_0.4-27                                      
+# [12] digest_0.6.35                                     
+# [13] png_0.1-8                                         
+# [14] lumi_2.54.0                                       
+# [15] ggrepel_0.9.5                                     
+# [16] deldir_2.0-4                                      
+# [17] combinat_0.0-8                                    
+# [18] permute_0.9-7                                     
+# [19] MASS_7.3-60.0.1                                   
+# [20] reshape_0.8.9                                     
+# [21] reshape2_1.4.4                                    
+# [22] httpuv_1.6.15                                     
+# [23] qvalue_2.34.0                                     
+# [24] withr_3.0.0                                       
+# [25] xfun_0.43                                         
+# [26] ellipsis_0.3.2                                    
+# [27] survival_3.5-8                                    
+# [28] doRNG_1.8.6                                       
+# [29] memoise_2.0.1                                     
+# [30] fastseg_1.48.0                                    
+# [31] BiasedUrn_2.0.11                                  
+# [32] profvis_0.3.8                                     
+# [33] gtools_3.9.5                                      
+# [34] DNAcopy_1.76.0                                    
+# [35] DEoptimR_1.1-3                                    
+# [36] R.oo_1.26.0                                       
+# [37] Formula_1.2-5                                     
+# [38] prettyunits_1.2.0                                 
+# [39] KEGGREST_1.42.0                                   
+# [40] promises_1.3.0                                    
+# [41] httr_1.4.7                                        
+# [42] restfulr_0.0.15                                   
+# [43] IlluminaHumanMethylation450kanno.ilmn12.hg19_0.6.1
+# [44] rhdf5filters_1.14.1                               
+# [45] methylKit_1.28.0                                  
+# [46] rhdf5_2.46.1                                      
+# [47] rstudioapi_0.16.0                                 
+# [48] miniUI_0.1.1.1                                    
+# [49] generics_0.1.3                                    
+# [50] base64enc_0.1-3                                   
+# [51] curl_5.2.1                                        
+# [52] zlibbioc_1.48.2                                   
+# [53] ChAMPdata_2.34.0                                  
+# [54] GenomeInfoDbData_1.2.11                           
+# [55] quadprog_1.5-8                                    
+# [56] SparseArray_1.2.4                                 
+# [57] interactiveDisplayBase_1.40.0                     
+# [58] xtable_1.8-4                                      
+# [59] stringr_1.5.1                                     
+# [60] desc_1.4.3                                        
+# [61] Illumina450ProbeVariants.db_1.38.0                
+# [62] doParallel_1.0.17                                 
+# [63] evaluate_0.23                                     
+# [64] S4Arrays_1.2.1                                    
+# [65] preprocessCore_1.64.0                             
+# [66] hms_1.1.3                                         
+# [67] irlba_2.3.5.1                                     
+# [68] colorspace_2.1-0                                  
+# [69] filelock_1.0.3                                    
+# [70] JADE_2.0-4                                        
+# [71] marray_1.80.0                                     
+# [72] magrittr_2.0.3                                    
+# [73] readr_2.1.5                                       
+# [74] later_1.3.2                                       
+# [75] viridis_0.6.5                                     
+# [76] lattice_0.22-6                                    
+# [77] robustbase_0.99-2                                 
+# [78] genefilter_1.84.0                                 
+# [79] XML_3.99-0.16.1                                   
+# [80] cowplot_1.1.3                                     
+# [81] class_7.3-22                                      
+# [82] Hmisc_5.1-2                                       
+# [83] pillar_1.9.0                                      
+# [84] nlme_3.1-164                                      
+# [85] caTools_1.18.2                                    
+# [86] compiler_4.3.3                                    
+# [87] stringi_1.8.4                                     
+# [88] ENmix_1.38.01                                     
+# [89] minqa_1.2.6                                       
+# [90] dendextend_1.17.1                                 
+# [91] GenomicAlignments_1.38.2                          
+# [92] deconvR_1.8.0                                     
+# [93] plyr_1.8.9                                        
+# [94] crayon_1.5.2                                      
+# [95] abind_1.4-5                                       
+# [96] BiocIO_1.12.0                                     
+# [97] emdbook_1.3.13                                    
+# [98] org.Hs.eg.db_3.18.0                               
+# [99] bit_4.0.5                                         
+#[100] dplyr_1.1.4                                       
+#[101] fastmatch_1.1-4                                   
+#[102] codetools_0.2-20                                  
+#[103] openssl_2.2.0                                     
+#[104] ChAMP_2.32.0                                      
+#[105] e1071_1.7-14                                      
+#[106] biovizBase_1.50.0                                 
+#[107] plotly_4.10.4                                     
+#[108] multtest_2.58.0                                   
+#[109] mime_0.12                                         
+#[110] wateRmelon_2.8.0                                  
+#[111] deming_1.4                                        
+#[112] splines_4.3.3                                     
+#[113] Rcpp_1.0.12                                       
+#[114] sparseMatrixStats_1.14.0                          
+#[115] IlluminaHumanMethylation450kmanifest_0.4.0        
+#[116] interp_1.1-6                                      
+#[117] knitr_1.46                                        
+#[118] blob_1.2.4                                        
+#[119] utf8_1.2.4                                        
+#[120] clue_0.3-65                                       
+#[121] BiocVersion_3.18.1                                
+#[122] lme4_1.1-35.2                                     
+#[123] AnnotationFilter_1.26.0                           
+#[124] fs_1.6.3                                          
+#[125] nnls_1.5                                          
+#[126] checkmate_2.3.1                                   
+#[127] DelayedMatrixStats_1.24.0                         
+#[128] pkgbuild_1.4.4                                    
+#[129] Gviz_1.46.1                                       
+#[130] tibble_3.2.1                                      
+#[131] Matrix_1.6-5                                      
+#[132] statmod_1.5.0                                     
+#[133] tzdb_0.4.0                                        
+#[134] pkgconfig_2.0.3                                   
+#[135] tools_4.3.3                                       
+#[136] cachem_1.1.0                                      
+#[137] RSQLite_2.3.7                                     
+#[138] numDeriv_2016.8-1.1                               
+#[139] viridisLite_0.4.2                                 
+#[140] globaltest_5.56.0                                 
+#[141] DBI_1.2.3                                         
+#[142] impute_1.76.0                                     
+#[143] fastmap_1.2.0                                     
+#[144] rmarkdown_2.26                                    
+#[145] scales_1.3.0                                      
+#[146] grid_4.3.3                                        
+#[147] geneplotter_1.80.0                                
+#[148] Rsamtools_2.18.0                                  
+#[149] coda_0.19-4.1                                     
+#[150] BiocManager_1.30.20                               
+#[151] VariantAnnotation_1.48.1                          
+#[152] carData_3.0-5                                     
+#[153] scrime_1.3.5                                      
+#[154] rpart_4.1.23                                      
+#[155] farver_2.1.2                                      
+#[156] mgcv_1.9-1                                        
+#[157] yaml_2.3.8                                        
+#[158] rsq_2.6                                           
+#[159] latticeExtra_0.6-30                               
+#[160] foreign_0.8-86                                    
+#[161] rtracklayer_1.62.0                                
+#[162] illuminaio_0.44.0                                 
+#[163] cli_3.6.2                                         
+#[164] purrr_1.0.2                                       
+#[165] siggenes_1.76.0                                   
+#[166] GEOquery_2.70.0                                   
+#[167] lifecycle_1.0.4                                   
+#[168] askpass_1.2.0                                     
+#[169] mvtnorm_1.2-4                                     
+#[170] sessioninfo_1.2.2                                 
+#[171] backports_1.4.1                                   
+#[172] BiocParallel_1.36.0                               
+#[173] annotate_1.80.0                                   
+#[174] methylumi_2.48.0                                  
+#[175] gtable_0.3.5                                      
+#[176] rjson_0.2.21                                      
+#[177] missMethyl_1.36.0                                 
+#[178] testthat_3.2.1.1                                  
+#[179] limma_3.58.1                                      
+#[180] jsonlite_1.8.8                                    
+#[181] edgeR_4.0.16                                      
+#[182] isva_1.9                                          
+#[183] bitops_1.0-7                                      
+#[184] ggplot2_3.5.1                                     
+#[185] assertthat_0.2.1                                  
+#[186] bit64_4.0.5                                       
+#[187] brio_1.1.4                                        
+#[188] base64_2.0.1                                      
+#[189] geneLenDataBase_1.38.0                            
+#[190] bdsmatrix_1.3-7                                   
+#[191] R.utils_2.12.3                                    
+#[192] DMRcate_2.16.1                                    
+#[193] lazyeval_0.2.2                                    
+#[194] dynamicTreeCut_1.63-1                             
+#[195] shiny_1.8.1.1                                     
+#[196] htmltools_0.5.8.1                                 
+#[197] affy_1.80.0                                       
+#[198] GO.db_3.18.0                                      
+#[199] rappdirs_0.3.3                                    
+#[200] ensembldb_2.26.0                                  
+#[201] glue_1.7.0                                        
+#[202] ROC_1.78.0                                        
+#[203] RCurl_1.98-1.14                                   
+#[204] rprojroot_2.0.4                                   
+#[205] mclust_6.1.1                                      
+#[206] BSgenome_1.70.2                                   
+#[207] jpeg_0.1-10                                       
+#[208] gridExtra_2.3                                     
+#[209] boot_1.3-30                                       
+#[210] R6_2.5.1                                          
+#[211] gplots_3.1.3.1                                    
+#[212] sva_3.50.0                                        
+#[213] tidyr_1.3.1                                       
+#[214] labeling_0.4.3                                    
+#[215] Deriv_4.1.3                                       
+#[216] GenomicFeatures_1.54.4                            
+#[217] bbmle_1.0.25.1                                    
+#[218] cluster_2.1.6                                     
+#[219] rngtools_1.5.2                                    
+#[220] pkgload_1.3.4                                     
+#[221] Rhdf5lib_1.24.2                                   
+#[222] beanplot_1.3.1                                    
+#[223] bsseq_1.38.0                                      
+#[224] nloptr_2.0.3                                      
+#[225] DelayedArray_0.28.0                               
+#[226] tidyselect_1.2.1                                  
+#[227] ProtGenerics_1.34.0                               
+#[228] nleqslv_3.3.5                                     
+#[229] htmlTable_2.4.2                                   
+#[230] xml2_1.3.6                                        
+#[231] car_3.1-2                                         
+#[232] AnnotationDbi_1.64.1                              
+#[233] fastICA_1.2-4                                     
+#[234] munsell_0.5.1                                     
+#[235] KernSmooth_2.23-22                                
+#[236] goseq_1.54.0                                      
+#[237] affyio_1.72.0                                     
+#[238] nor1mix_1.3-3                                     
+#[239] data.table_1.15.4                                 
+#[240] htmlwidgets_1.6.4                                 
+#[241] RColorBrewer_1.1-3                                
+#[242] biomaRt_2.58.2                                    
+#[243] rlang_1.1.4                                       
+#[244] remotes_2.5.0                                     
+#[245] ggnewscale_0.4.10                                 
+#[246] fansi_1.0.6
+```
+
+
+

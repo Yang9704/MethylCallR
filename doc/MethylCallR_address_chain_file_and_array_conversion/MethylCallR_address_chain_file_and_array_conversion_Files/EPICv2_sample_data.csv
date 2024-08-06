@@ -1,0 +1,4 @@
+Sample_Name,Sentrix_ID,Sentrix_Position,Age,Sex,Sample_Group
+Sample1,206891110004 ,R01C01,10,1,Case
+Sample2,206891110004 ,R07C01,20,2,Control
+Sample3,206891110004 ,R08C01,30,1,Control

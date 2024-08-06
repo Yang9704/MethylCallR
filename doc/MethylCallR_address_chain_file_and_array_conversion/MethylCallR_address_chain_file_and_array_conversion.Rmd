@@ -1,0 +1,241 @@
+---
+title: "MethylCallR_address_chain_file_and_array_conversion"
+author: "Hyun-Ho, Yang"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+
+## Summary
+
+This example explains the method to control duplicated probes, generate the address chain file, and convert EPICv2 data to previous versions.
+
+To provide an example, we used the demo data downloaded from the Illumina official website. The data can be accessed at \url{https://support.illumina.com/array/array_kits/infinium-methylationepic-beadchip-kit/downloads.html}.
+
+## Data preparation
+
+The downloaded raw IDAT files should be unzipped and placed in the same directory. In this example, we assumed that the raw IDAT files were stored in "`/user/MethylCallR_Test/Illumina_demo_EPICV2/`".
+
+When importing demo data through MethylCallR, the required sample data file can be found in the directory `MethylCallR/doc/MethylCallR_address_chain_file_and_array_conversion/MethylCallR_address_chain_file_and_array_conversion_Files`.
+
+We assumed that the sample data file was saved in "`/user/MethylCallR_Test/Illumina_demo_EPICV2/EPICv2_sample_data.csv`".
+
+
+```{r Chunk1, include=FALSE}
+data.Import <- MeCall.ReadIdat(idat.dir = "/user/MethylCallR_Test/Illumina_demo_EPICV2/", pd.file = "/user/MethylCallR_Test/Illumina_demo_EPICV2/EPICv2_sample_data.csv", offset = 100, platform = c("EPICv2"))
+```
+
+```{r Chunk1-1, include=FALSE}
+names(data.Import)
+# [1] "beta"      "M"         "intensity" "Meth"      "Unmeth"    "detP"     
+# [7] "B.count"   "pd"        "TAG"       "minfi.Set"
+
+
+dim(data.Import$beta)
+# [1] 937055      3
+
+data.Import$beta[1:4,1:4]
+#                   Sample1    Sample2    Sample3
+#cg25335775_BC21 0.09735627 0.09305994 0.07531023
+#cg25341653_BC21 0.84000000 0.84889241 0.86613845
+#cg25372195_BC21 0.11298640 0.28216165 0.20000000
+#cg25411725_BC21 0.80538618 0.78527185 0.81116158
+
+data.Import$minfi.Set$rgSet
+#class: RGChannelSet 
+#dim: 1105209 3 
+#metadata(0):
+#assays(2): Green Red
+#rownames(1105209): 1600157 1600179 ... 99810982 99810990
+#rowData names(0):
+#colnames(3): Sample1 Sample2 Sample3
+#colData names(6): Sample_Name Slide ... Sex Sample_Group
+#Annotation
+#  array: IlluminaHumanMethylationEPICv2
+#  annotation: 20a1.hg38
+
+data.Import$minfi.Set$mSet
+#class: MethylSet 
+#dim: 937055 3 
+#metadata(0):
+#assays(2): Meth Unmeth
+#rownames(937055): cg25335775_BC21 cg25341653_BC21 ...
+#  nv-GRCh38-chr7-152265113-152265113-C-A_BC11
+#  nv-GRCh38-chr7-152265113-152265113-C-T_TC11
+#rowData names(0):
+#colnames(3): Sample1 Sample2 Sample3
+#colData names(6): Sample_Name Slide ... Sex Sample_Group
+#Annotation
+#  array: IlluminaHumanMethylationEPICv2
+#  annotation: 20a1.hg38
+#Preprocessing
+#  Method: NA
+#  minfi version: NA
+#  Manifest version: NA
+```
+
+
+## Generate `Address_chain_file`
+
+`Address chain file` can be generated using `MeCall.SetChainFile`.
+```{r Chunk2, include=FALSE}
+MeCall.SetChainFile(remove.list = NULL, auto.remove = FALSE, global.env = TRUE)
+```
+
+If the remove.list argument is set to NULL, the chain file will be generated based on preset data implemented in MethylCallR.
+`Duplicated.Probes.preset` is a data frame object that has a probe list to remove. This data is a subset of the Illumina EPICv2 manifest (`IlluminaHumanMethylationEPIC.V2a1.hg38`).
+
+```{r Chunk3, include=FALSE}
+dim(Duplicated.Probes.preset)
+# [1] 6963   28
+
+head(Duplicated.Probes.preset)[,1:4]
+#                      Name AddressA_ID AddressB_ID Color_Channel
+#cg00002033_TC12 cg00002033    22717226    17691929           Grn
+#cg00002426_BC22 cg00002426    53715306          NA              
+#cg00012692_BC12 cg00012692    60633427    68734181           Red
+#cg00016699_BC22 cg00016699    35649404          NA              
+#cg00017461_BC12 cg00017461    50639583    31712553           Red
+#cg00021275_BC22 cg00021275    77698555          NA              
+```
+
+After running MeCall.SetChainFile, the Address_chain_file will be created as a global variable in R.
+
+```{r Chunk4, include=FALSE}
+ls()
+# [1] "Address_chain_file" "data.Import"  
+
+head(Address_chain_file)
+#                EPICv2_Name EPICv2_AddressA_ID EPICv2_AddressB_ID
+#cg25324105_BC11  cg25324105            1754126           99753217
+#cg25383568_TC11  cg25383568           79792482           69667133
+#cg25455143_BC11  cg25455143           80699190            7659147
+#cg25459778_BC11  cg25459778           60797262           65710482
+#cg25487775_BC11  cg25487775            5799427           89606481
+#cg25595446_BC11  cg25595446           65640459           39619855
+#                EPICv2_Color_Channel EPICv2_Infinium_Design_Type EPICv1_Name
+#cg25324105_BC11                  Red                           I  cg25324105
+#cg25383568_TC11                  Grn                           I  cg25383568
+#cg25455143_BC11                  Red                           I  cg25455143
+#cg25459778_BC11                  Grn                           I  cg25459778
+#cg25487775_BC11                  Red                           I  cg25487775
+#cg25595446_BC11                  Grn                           I  cg25595446
+#                EPICv1_AddressA_ID EPICv1_AddressB_ID EPICv1_Color_Channel
+#cg25324105_BC11           45678993           77772910                  Red
+#cg25383568_TC11           80765370           80740275                  Grn
+#cg25455143_BC11           32623209           16783987                  Red
+#cg25459778_BC11           94603887           21788545                  Grn
+#cg25487775_BC11           99729178           49657529                  Red
+#cg25595446_BC11            1788109           90771247                  Grn
+#                EPICv1_Infinium_Design_Type Methyl450K_Name
+#cg25324105_BC11                           I      cg25324105
+#cg25383568_TC11                           I      cg25383568
+#cg25455143_BC11                           I      cg25455143
+#cg25459778_BC11                           I      cg25459778
+#cg25487775_BC11                           I      cg25487775
+#cg25595446_BC11                           I      cg25595446
+#                Methyl450K_AddressA_ID Methyl450K_AddressB_ID
+#cg25324105_BC11               15610459               30645456
+#cg25383568_TC11               18609425               33603340
+#cg25455143_BC11               10691475               38761410
+#cg25459778_BC11               56785457               15747493
+#cg25487775_BC11               20602342               32758500
+#cg25595446_BC11               27638328               41748394
+#                Methyl450K_Color_Channel Methyl450K_Infinium_Design_Type
+#cg25324105_BC11                      Red                               I
+#cg25383568_TC11                      Grn                               I
+#cg25455143_BC11                      Red                               I
+#cg25459778_BC11                      Grn                               I
+#cg25487775_BC11                      Red                               I
+#cg25595446_BC11                      Grn                               I            
+```
+
+EPICv2 data will be converted based on this data.
+
+On the other hand, users can provide a list of duplicated probes to be removed through the `RemoveDup` parameter in `MeCall.Filtering`.
+If the user sets `"MethylCallR"` for the `RemoveDup` parameter, the preset data will be used.
+
+```{r Chunk5, include=FALSE}
+data.filtered <- MeCall.Filtering(data = data.Import, RemoveDup = "MethylCallR", badSample.minfi = FALSE)
+```
+
+To use user customized data, a data.frame object containing the probes to be removed as row names can be provided to the RemoveDup parameter. Ensure that the address ID information (named as `AddressA_ID` and `AddressB_ID`) for each probe is included in a column to create an `address chain file`. We recommend using a subset of the Illumina EPICv2 manifest (`data(IlluminaHumanMethylationEPIC.V2a1.hg38)`).
+
+## Convert EPICv2 data to other versions
+
+When converting a beta-value matrix from EPICv2 to EPICv1 :
+```{r Chunk6, include=FALSE}
+EPICv1.converted.Beta <- MeCallR.ShiftArray(data.filtered$beta, From = "EPICv2", To = "EPICv1", type = c("Matrix"))
+```
+
+```{r Chunk6-1, include=FALSE}
+dim(EPICv1.converted.Beta)
+# [1] 673840      3
+```
+
+When converting a RGChannelSet from EPICv2 to EPICv1 :
+```{r Chunk7, include=FALSE}
+EPICv1.converted.rgSet <- MeCallR.ShiftArray(data.filtered$minfi.Set$rgSet, From = "EPICv2", To = "EPICv1", type = c("rgSet"))
+```
+
+```{r Chunk7-1, include=FALSE}
+EPICv1.converted.rgSet
+#class: RGChannelSet 
+#dim: 832127 3 
+#metadata(0):
+#assays(2): Green Red
+#rownames(832127): 30652921 73600589 ... 73784382 73794434
+#rowData names(0):
+#colnames(3): Sample1 Sample2 Sample3
+#colData names(6): Sample_Name Slide ... Sex Sample_Group
+#Annotation
+#  array: IlluminaHumanMethylationEPIC
+#  annotation: ilm10b4.hg19
+```
+
+When converting a MethylSet from EPICv2 to EPICv1 :
+```{r Chunk8, include=FALSE}
+EPICv1.converted.mSet <- MeCallR.ShiftArray(data.filtered$minfi.Set$mSet, From = "EPICv2", To = "EPICv1", type = c("mSet"))
+```
+
+```{r Chunk8-1, include=FALSE}
+EPICv1.converted.mSet
+#class: MethylSet 
+#dim: 722756 3 
+#metadata(0):
+#assays(2): Meth Unmeth
+#rownames(722756): cg25324105 cg25383568 ... ch.12.78471492F
+#  ch.21.43742285F
+#rowData names(0):
+#colnames(3): Sample1 Sample2 Sample3
+#colData names(6): Sample_Name Slide ... Sex Sample_Group
+#Annotation
+#  array: IlluminaHumanMethylationEPIC
+#  annotation: ilm10b4.hg19
+#Preprocessing
+#  Method: Raw (no normalization or bg correction)
+#  minfi version: 1.48.0
+#  Manifest version: 1.0.0
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

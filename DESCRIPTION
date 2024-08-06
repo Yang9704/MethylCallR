@@ -1,0 +1,52 @@
+Package: MethylCallR
+Title: MethylCallR : A comprehensive analysis framework for Illumina methylation Beadchip
+Version: 0.0.0.9000
+Authors@R: 
+    person("Hyun-Ho", "Yang", "yhho97@inu.ac.kr", role = c("aut", "cre"),
+           comment = c(ORCID = "0009-0004-4458-8165"))
+    person("Mi-Ryung", "Han", "genetic0309@inu.ac.kr", role = "aut")
+Description: MethylCallR is an open-source R package designed to provide standard procedures for performing EWAS using Illumina methylation microarrays including EPICv2. To control duplicated probes in EPICv2, users can use preset data implemented in MethylCallR or upload customized data. Additionally, MethylCallR includes a straightforward converting function between different types of Illumina Human Methylation BeadChip. To select meaningful probes, potential outlier sample detection and statistical power estimation can be conducted.
+License: GPL (>= 3)
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Depends: 
+    R (>= 2.10)
+LazyData: true
+Suggests: 
+    dmrff,
+    EpiSCORE,
+    pwrEWAS,
+    seqlm
+Imports: 
+    bumphunter,
+    car,
+    ChAMP,
+    cowplot,
+    deconvR,
+    DMRcate,
+    DNAcopy,
+    dplyr,
+    ENmix,
+    fastmatch,
+    FlowSorted.Blood.EPIC,
+    GenomicRanges,
+    ggnewscale,
+    ggplot2,
+    ggrepel,
+    grDevices,
+    illuminaio,
+    limma,
+    methods,
+    minfi,
+    missMethyl,
+    preprocessCore,
+    reshape,
+    robustbase,
+    scales,
+    stats,
+    stringr,
+    sva,
+    utils,
+    wateRmelon,
+    xfun
