@@ -58,7 +58,7 @@ returned result object.
 \examples{
 \dontrun{
 # Identify outliers with default settings and generate scatter plot
-Outliers <- MeCall.Outlier(meth = data.Norm, pd = data.filtered$pd, group = "Sample_Group", 
+Outliers <- MeCall.Outlier(meth = data.Norm$beta, pd = data.filtered$pd, group = "Sample_Group", 
 nrep = 1000, sample.fraction = 0.9, conf = 0.999, n.component = 2, plot = TRUE)
 
 # To call the ggplot2 object

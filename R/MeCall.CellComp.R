@@ -152,11 +152,11 @@ arraytype = "850k"
 meth <- MeCallR.ShiftArray(meth, From = "EPICv2", To = "EPICv1", type= c("Matrix"))
 }
 
-#library(EpiSCORE)
 if(method == "EpiSCORE"){
 if(!requireNamespace("EpiSCORE", quietly = TRUE)){
 stop("\n[MeCall]-!!ERROR!! : [EpiSCORE] R package is not founded in your R environment. Please load [EpiSCORE] R package to run this function using EpiSCORE method {library(EpiSCORE)}. You can download [EpiSCORE] R package at following github page : https://github.com/aet21/EpiSCORE")
 }
+library(EpiSCORE)
 if(!CellType %in% EpiSCORE.types){
 EpiSCORE.msg <- paste(EpiSCORE.types,collapse=", ")
 stop("\n[MeCall]-!!ERROR!! : ",CellType," is not supported in EpiSCORE R package. Please refer following cell types : ",EpiSCORE.msg)
@@ -183,8 +183,8 @@ celltypes <- colnames(cell.df)
 }
 
 
-#library(deconvR)
 if(method == "deconvR"){
+library(deconvR)
 data("HumanCellTypeMethAtlas")
 if(!CellType %in% deconvR.types){
 deconvR.msg <- paste(deconvR.types,collapse=", ")

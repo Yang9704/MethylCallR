@@ -41,13 +41,13 @@
 #' @examples
 #' \dontrun{
 #' # Run [MeCall.DMP] with default setting.
-#' data.DMPs <- MeCall.DMP(meth = MeCall.CellComp$adjusted.meth, 
-#' pd = MeCall.RemoveBatch$modified.pd, interest = "Sample_Group", design = data.design, 
+#' data.DMPs <- MeCall.DMP(meth = data.CellComp$adjusted.meth, 
+#' pd = data.rmBatch$modified.pd, interest = "Sample_Group", design = data.design, 
 #' cutoff.P=1, multi.P = 'BH', arraytype="EPICv1")
 #' }
 #'
 #' @export
-MeCall.DMP <- function(meth = MeCall.CellComp$adjusted.meth, pd = MeCall.RemoveBatch$modified.pd, interest = "Sample_Group", design = data.design, cutoff.P=1, multi.P = 'BH', arraytype="EPICv1"){
+MeCall.DMP <- function(meth = data.CellComp$adjusted.meth, pd = data.rmBatch$modified.pd, interest = "Sample_Group", design = data.design, cutoff.P=1, multi.P = 'BH', arraytype=c("450k","EPICv1","EPICv2")){
 message("\n[MeCall]-[notice] : Find DMPs with input data.")
 adjs <- c("none","BH","BF")
 if(!multi.P %in% adjs){

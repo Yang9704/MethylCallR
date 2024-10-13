@@ -24,7 +24,7 @@
 #' `filtered.CpG.list`.
 #'
 #' If your data uses the microarray version EPICv2, we recommend setting the
-#' `RemoveDup` parameter to TRUE. Setting this parameter to TRUE will ensure 
+#' `RemoveDup` parameter to `MethylCallR`. Setting this parameter to `MethylCallR` will ensure 
 #' that duplicated probes in EPICv2 are selected to maintain characteristics 
 #' similar to those in the previous microarray version. For example, 
 #' if probe X was a type 1 probe in EPICv1, and both type 1 and type 2 probes
@@ -36,7 +36,7 @@
 #' versions (EPICv2 and EPICv1) of the Illumina manifest through comparison.
 #'
 #' @param data A return object from `MeCall.ReadIdat()`
-#' @param RemoveDup Option for EPICv2 data. When set to `MethylCallR`, code removes duplicated probes and generate `Address_chain_file` based on the data implemented in MethylCallR. If user provides customized data, code will remove duplicated probes based on the user data. If it set to `none`, code will pass this step.
+#' @param RemoveDup Option for EPICv2 data. When set to `MethylCallR`, code removes duplicated probes and generate `Address_chain_file` based on the data implemented in MethylCallR. If user provides customized data, code will remove duplicated probes based on the user data. If it set to `none`, code will skip this step.
 #' @param badSample.minfi Logical. The sample filtering method implemented in the minfi R package is applied. The quality of each sample will be assessed based on the median of log-scaled intensity values.
 #' @param badSampleCutoff.minfi Samples with values below the threshold are removed.
 #' @param detectionP Logical. Filtering probes based on detection P-value matrix.
@@ -102,7 +102,7 @@
 #' }
 #'
 #' @export
-MeCall.Filtering <- function(data = Idat.list, RemoveDup = TRUE, badSample.minfi = TRUE, badSampleCutoff.minfi = 10.5, detectionP = TRUE, detP.probe.cutoff = 0.01, detP.sample.cutoff = 0.1, detP.failed.ratio = 0, beadcount = TRUE, beadcutoff = 0.05, NoCG = TRUE, SNPmask = TRUE, population = "General", Multihit = TRUE, Multihit.method = "WGBS" ,Sexchr = "XY", FLAG = TRUE, hg38.mapfail = TRUE){
+MeCall.Filtering <- function(data = Idat.list, RemoveDup = "MethylCallR", badSample.minfi = TRUE, badSampleCutoff.minfi = 10.5, detectionP = TRUE, detP.probe.cutoff = 0.01, detP.sample.cutoff = 0.1, detP.failed.ratio = 0, beadcount = TRUE, beadcutoff = 0.05, NoCG = TRUE, SNPmask = TRUE, population = "General", Multihit = TRUE, Multihit.method = "WGBS" ,Sexchr = "XY", FLAG = TRUE, hg38.mapfail = TRUE){
 message("\n[MeCall]-[notice] : Running probe filtering procedure.")
 platform <- data$TAG
 
@@ -113,24 +113,32 @@ stop("\n[MeCall]-!!ERROR!! : ",platform," : Unknown Array platform.")
 population <- match.arg(population, c('AFR', 'EAS', 'EUR', 'SAS', 'AMR', 'GWD', 'YRI', 'TSI', 'IBS', 'CHS', 'PUR', 'JPT', 'GIH', 'CHASK', 'STU', 'ITU', 'LWK', 'KHV', 'FIN', 'ESN', 'CEU', 'PJL', 'ACASK', 'CLM', 'CDX', 'GBR', 'BEASK', 'PEL', 'MSL', 'MXL', 'ASW', 'General'), several.ok = TRUE)
 
 # Re-shaping EPICv2
-Duplicated.probes <-c()
-if(platform == "EPICv2" & RemoveDup == "none"){
-message("\n[MeCall]-[notice] : ")
 Duplicated.probes <- c()
-} else {
+if(platform == "EPICv2"){
+if(RemoveDup == "none"){
+message("\n[MeCall]-[notice] : Array type : EPICv2 / RemoveDup = FALSE")
+message("\n[MeCall]-[notice] : Duplicated probes will not be removed.")
+Duplicated.probes <- c()
+} else if(RemoveDup == "MethylCallR"){
 message("\n[MeCall]-[notice] : Array type : EPICv2 / RemoveDup = TRUE")
-
-if(RemoveDup == "MethylCallR"){
 message("\n[MeCall]-[notice] : Remove duplicated probes using MethylCallR data.")
 MeCall.SetChainFile()
 Duplicated.probes <- rownames(Duplicated.Probes.preset)
 data <- ReShapeImportObj(data, Duplicated.Probes.preset)
-} else {
+}else {
+message("\n[MeCall]-[notice] : Array type : EPICv2 / RemoveDup = TRUE")
 message("\n[MeCall]-[notice] : Remove duplicated probes using user provided data.")
+
+if(!is.data.frame(RemoveDup)){
+stop("\n[MeCall]-!!ERROR!! : The `RemoveDup` parameter should be a dataframe. Please refer the `data(Duplicated.Probes.preset)` to make user customized list. User may want to set the `RemoveDup` parameter in `MethylCallR` to use the list provided by MethylCallR.")
+}
+
 MeCall.SetChainFile(remove.list = RemoveDup)
 Duplicated.probes <- rownames(RemoveDup)
 data <- ReShapeImportObj(data, RemoveDup)
-}}
+}
+}
+
 
 detectM <- data$detP
 Bcount <- data$B.count

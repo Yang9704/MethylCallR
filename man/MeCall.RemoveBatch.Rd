@@ -67,11 +67,11 @@ parameter from the correction process.
 \examples{
 \dontrun{
 # Run [MeCall.RemoveBatch] with default setting.
-data.rmBatch <- MeCall.RemoveBatch(meth = data.Norm, pd = data.filtered$pd, 
+data.rmBatch <- MeCall.RemoveBatch(meth = data.Norm$beta, pd = data.filtered$pd, 
 batches=c("Slide","Array"), interest="Sample_Group", do.sva = FALSE)
 
 # Run [MeCall.RemoveBatch] with SVA.
-data.rmBatch.SVA <- MeCall.RemoveBatch(meth = data.Norm, pd = data.filtered$pd, 
+data.rmBatch.SVA <- MeCall.RemoveBatch(meth = data.Norm$beta, pd = data.filtered$pd, 
 batches=c("Slide","Array"), interest="Sample_Group", do.sva = TRUE, exception = c("Age","Sex"))
 }
 

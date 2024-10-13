@@ -30,7 +30,7 @@ variables and the input data.
 }
 \examples{
 \dontrun{
-data.Heatmap <- MeCall.FindBatch(meth = data.Norm, pd = data.filtered$pd, batches=NULL, 
+data.Heatmap <- MeCall.FindBatch(meth = data.Norm$beta, pd = data.filtered$pd, batches=NULL, 
 n.comp = 0)
 
 # To call the ggplot2 object

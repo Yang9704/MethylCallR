@@ -231,8 +231,6 @@ To.cols <- colnames(Address_chain_file)[grepl(To, colnames(Address_chain_file))]
 
 Name.df <- subset(Address_chain_file, !is.na(Address_chain_file[,Fr.cols[1]]) & !is.na(Address_chain_file[,To.cols[1]]))
 
-rownames(Name.df) <- Name.df[,Fr.cols[1]]
-
 if(From == "EPICv2"){
 Object <- setdiff(Object, rownames(Duplicated.Probes.preset))
 }

@@ -121,6 +121,7 @@ out.plot <- out.plot + theme_minimal() + theme(legend.title=element_text(size=16
 
 #### Volcano plot gene labeling
 if(!is.null(gene.label)){
+man_data$CpGid <- rownames(man_data)
 label_don <- subset(man_data, CpGid %in% gene.label)
 out.plot <- out.plot + ggrepel::geom_label_repel(data = label_don, aes(label = gene), size = 6, fill= "white",colour = "black", box.padding = 1, max.overlaps= Inf, segment.color = "black")}
 }
@@ -131,9 +132,10 @@ out.plot <- out.plot + ggrepel::geom_label_repel(data = label_don, aes(label = g
 if(type == "Manhattan"){
 message("\n[MeCall]-[notice] : Manhattan plot is selected.")
 n.cut <- tail(subset(man_data, adjusted.p <= cutoff),1)$p
-f.levels <- paste0("chr",c(1:22,"X","Y"))
+f.levels <- paste0("chr",c(1:22,"X","Y","M"))
 f.levels <- intersect(f.levels,unique(man_data$Chr))
 Chr_color <- rep(c("moccasin","plum3"), 15)[1:length(f.levels)]
+man_data$CpGid <- rownames(man_data)
 man_data$Chr <- factor(man_data$Chr, levels = f.levels)
 don <- man_data %>% dplyr::group_by(Chr) %>% dplyr::summarise(chr_len=max(Position)) %>% dplyr::mutate(tot=cumsum(as.numeric(chr_len))-chr_len) %>% dplyr::select(-chr_len) %>% dplyr::left_join(man_data, ., by=c("Chr"="Chr")) %>% dplyr::arrange(Chr, Position) %>% dplyr::mutate(BPcum=Position+tot)
 

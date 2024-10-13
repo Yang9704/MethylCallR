@@ -6,7 +6,7 @@
 \usage{
 MeCall.Filtering(
   data = Idat.list,
-  RemoveDup = TRUE,
+  RemoveDup = "MethylCallR",
   badSample.minfi = TRUE,
   badSampleCutoff.minfi = 10.5,
   detectionP = TRUE,
@@ -28,7 +28,7 @@ MeCall.Filtering(
 \arguments{
 \item{data}{A return object from \code{MeCall.ReadIdat()}}
 
-\item{RemoveDup}{Option for EPICv2 data. When set to \code{MethylCallR}, code removes duplicated probes and generate \code{Address_chain_file} based on the data implemented in MethylCallR. If user provides customized data, code will remove duplicated probes based on the user data. If it set to \code{none}, code will pass this step.}
+\item{RemoveDup}{Option for EPICv2 data. When set to \code{MethylCallR}, code removes duplicated probes and generate \code{Address_chain_file} based on the data implemented in MethylCallR. If user provides customized data, code will remove duplicated probes based on the user data. If it set to \code{none}, code will skip this step.}
 
 \item{badSample.minfi}{Logical. The sample filtering method implemented in the minfi R package is applied. The quality of each sample will be assessed based on the median of log-scaled intensity values.}
 
@@ -89,7 +89,7 @@ according to the manifest provided by Illumina and add them to the
 \code{filtered.CpG.list}.
 
 If your data uses the microarray version EPICv2, we recommend setting the
-\code{RemoveDup} parameter to TRUE. Setting this parameter to TRUE will ensure
+\code{RemoveDup} parameter to \code{MethylCallR}. Setting this parameter to \code{MethylCallR} will ensure
 that duplicated probes in EPICv2 are selected to maintain characteristics
 similar to those in the previous microarray version. For example,
 if probe X was a type 1 probe in EPICv1, and both type 1 and type 2 probes

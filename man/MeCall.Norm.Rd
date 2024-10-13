@@ -8,8 +8,7 @@ MeCall.Norm(
   data = filtered,
   method = c("BMIQ", "Funn", "SWAN", "ENmix", "dasen", "Noob"),
   InterpolatedXY = FALSE,
-  offset = 100,
-  return.type = "M"
+  offset = 100
 )
 }
 \arguments{
@@ -44,20 +43,15 @@ across 4 different R packages (ENmix, minfi, WateRmelon, and ChAMP) :
 Due to variations in input formats required by each normalization algorithm,
 we recommend to utilize the return object of \code{MethylCallR.filtering()} function.
 
-The interpolatedXY step is an additional process that normalizes CpG sites on sex chromosomes
-without bias based on independently normalized autosomal CpG sites. This step can be utilized
-when the method parameter is set to \code{Funn} or \code{dasen}. For more details, refer to
-\code{\link[wateRmelon:adjustedFunnorm]{wateRmelon::adjustedFunnorm()}} and \code{\link[wateRmelon:adjustedDasen]{wateRmelon::adjustedDasen()}}.
+The interpolatedXY step is an additional process that normalizes CpG sites on sex chromosomes without bias based on independently normalized autosomal CpG sites. This step can be utilized when the method parameter is set to \code{Funn} or \code{dasen}. For more details, refer to \code{\link[wateRmelon:adjustedFunnorm]{wateRmelon::adjustedFunnorm()}} and \code{\link[wateRmelon:adjustedDasen]{wateRmelon::adjustedDasen()}}.
 }
 \examples{
 \dontrun{
 # For [functional normalization] and [Beta-value]
-data.Norm.FUNN <- MeCall.Norm(data = data.filtered, method = c("Funn"), offset=100, 
-return.type = "B")
+data.Norm.FUNN <- MeCall.Norm(data = data.filtered, method = c("Funn"), offset=100) 
 
 # For [BMIQ] and [M-value]
-data.Norm.BMIQ <- MeCall.Norm(data = data.filtered, method = c("BMIQ"), offset=100, 
-return.type = "M")
+data.Norm.BMIQ <- MeCall.Norm(data = data.filtered, method = c("BMIQ"), offset=100)
 }
 
 }

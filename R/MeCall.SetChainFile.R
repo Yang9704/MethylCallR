@@ -90,6 +90,12 @@ Remain.row <- setdiff(Full.row, rm.row)
 EPICv2_peter_manifest <- Modified_EPICv2_manifest_in_TJ.Peters_BMCgenomics_2024
 Rep_set <- subset(EPICv2_peter_manifest, !((seqrep_IlmnIDs == "") & (posrep_IlmnIDs == "")))
 
+Name.dup.probes <- c("cg01361899","cg15317267","cg18801637","cg23977670")
+Name.list <- lapply(c(1:4), function(x){
+mani.sub <- rownames(subset(EPICv2_peter_manifest, Name %in% Name.dup.probes[x]))
+return(mani.sub)})
+
+
 Rep_set_list <- lapply(c(1:nrow(Rep_set)), function(x) {
 A <- unlist(str_split(Rep_set[x,"seqrep_IlmnIDs"], ";"))
 A <- A[grep("cg", A)]
@@ -104,6 +110,8 @@ Unique_Rep_sets <- names(table(unlist(lapply(Rep_set_list, function(x){paste(x,c
 Unique_Rep_set_list <- lapply(c(1:length(Unique_Rep_sets)), function(x){
 Rep_vec <- unlist(str_split(Unique_Rep_sets[x], ";"))
 return(Rep_vec)})
+
+Unique_Rep_set_list <- c(Unique_Rep_set_list, Name.list)
 
 Check_con_rep <- unlist(lapply(Unique_Rep_set_list, function(x){
 Rmained <- length(setdiff(x, rm.row))

@@ -79,7 +79,23 @@ colnames(pd)[which(colnames(pd)=="Sentrix_ID")] <- "Slide"}
 if(any(colnames(pd) %in% "Sentrix_Position")){
 colnames(pd)[which(colnames(pd)=="Sentrix_Position")] <- "array"}
 
-IDATnm <- paste(pd$Slide,pd$array,sep='_')
+
+if(any(is.na(pd$Slide))){
+message("\n[MeCall]-[WARNING] : NA is detected in Slide column. Please ensure that sufficiently specific information is provided to load the correct IDAT file.")
+Mod_slide <- stringr::str_replace_na(pd$Slide, replacement="")
+} else {
+Mod_slide <- pd$Slide
+}
+
+if(any(is.na(pd$array))){
+message("\n[MeCall]-[WARNING] : NA is detected in array column. Please ensure that sufficiently specific information is provided to load the correct IDAT file.")
+Mod_array <- stringr::str_replace_na(pd$array, replacement="")
+} else {
+Mod_array <- pd$array
+}
+
+
+IDATnm <- paste(Mod_slide,Mod_array,sep='_')
 Grnlist <- list.files(idat.dir,pattern='Grn')
 Redlist <- list.files(idat.dir,pattern='Red')
 

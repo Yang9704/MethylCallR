@@ -77,6 +77,12 @@ allCpGs <- rownames(DMP.object@Main.info)
 #### Set manifest for EPICv2
 if(!is.null(minfi.object.EPICv2)){
 annos <- getAnnotation(minfi.object.EPICv2$minfi.Set$rgSet)
+com.idx <- intersect(rownames(DMP.object@Main.info), rownames(annos))
+annos <- annos[com.idx, ]
+
+annos$Name <- unlist(lapply(annos$Name, function(x){strsplit(x,split="_")[[1]][1]}))
+SigCpGs <- unlist(lapply(SigCpGs, function(x){strsplit(x,split="_")[[1]][1]}))
+allCpGs <- unlist(lapply(allCpGs, function(x){strsplit(x,split="_")[[1]][1]}))
 }else{annos <- NULL}
 
 
@@ -119,7 +125,7 @@ GO.counts <- table(GO$ONTOLOGY)
 KEGG.counts <- nrow(KEGG)
 
 if(is.na(GO.counts["BP"])){
-BP.GO <- NULL
+BP.GO.ReCon <- data.frame(Category = c(), ID = c(), Description = c(), Gene_in_description = c(),Gene_Count = c(), p_value = c(), FDR = c(), Significant_gene = c())
 }else{BP.GO <- subset(GO, ONTOLOGY == "BP")
 BP.GO$ONTOLOGY <- "GO-Biological Process"
 BP.GO <- BP.GO[order(BP.GO$P.DE),]
@@ -128,7 +134,7 @@ BP.GO.ReCon <- data.frame(Category = BP.GO$ONTOLOGY, ID = rownames(BP.GO), Descr
 }
 
 if(is.na(GO.counts["CC"])){
-CC.GO.ReCon <- NULL
+CC.GO.ReCon <- data.frame(Category = c(), ID = c(), Description = c(), Gene_in_description = c(),Gene_Count = c(), p_value = c(), FDR = c(), Significant_gene = c())
 }else{CC.GO <- subset(GO, ONTOLOGY == "CC")
 CC.GO$ONTOLOGY <- "GO-Cellular Components"
 CC.GO <- CC.GO[order(CC.GO$P.DE),]
@@ -138,7 +144,7 @@ CC.GO.ReCon <- data.frame(Category = CC.GO$ONTOLOGY, ID = rownames(CC.GO), Descr
 
 
 if(is.na(GO.counts["MF"])){
-MF.GO.ReCon <- NULL
+MF.GO.ReCon <- data.frame(Category = c(), ID = c(), Description = c(), Gene_in_description = c(),Gene_Count = c(), p_value = c(), FDR = c(), Significant_gene = c())
 }else{MF.GO <- subset(GO, ONTOLOGY == "MF")
 MF.GO$ONTOLOGY <- "GO-Molecular Function"
 MF.GO <- MF.GO[order(MF.GO$P.DE),]
@@ -147,7 +153,7 @@ MF.GO.ReCon <- data.frame(Category = MF.GO$ONTOLOGY, ID = rownames(MF.GO), Descr
 }
 
 if(KEGG.counts == 0){
-KEGG.ReCon <- NULL
+KEGG.ReCon <- data.frame(Category = c(), ID = c(), Description = c(), Gene_in_description = c(),Gene_Count = c(), p_value = c(), FDR = c(), Significant_gene = c())
 }else{KEGG <- KEGG[order(KEGG$P.DE),]
 
 KEGG.ReCon <- data.frame(Category = "KEGG Pathway", ID = rownames(KEGG), Description = KEGG$Description, Gene_in_description = KEGG$N,Gene_Count = KEGG$DE, p_value = KEGG$P.DE, FDR = KEGG$FDR, Significant_gene = KEGG$SigGenesInSet)

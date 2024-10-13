@@ -127,21 +127,27 @@ message("------------------------------------------------------------------")
 message("\n[MeCall]-[NOTICE] : Bumphunter algorithm Start.")
 message("\n[MeCall]-[NOTICE] : This code based on DMR function in ChAMP.")
 message("\n[MeCall]-[NOTICE] : If you want to know more detail information about code, you should visit ChAMP documentation.")
-message("\n[MeCall]-[NOTICE] : Bumphunter use ",cores," cores to calculate DMR.")
+#message("\n[MeCall]-[NOTICE] : Bumphunter use ",cores," cores to calculate DMR.")
 
 if(is.null(probe_gap)){
 probe_gap = 250
 }
 
 CHR.levels <- paste0("chr",c(1:22,"X","Y","M"))
+Anno.idx <- intersect(rownames(meth),rownames(mani))
+mani <- mani[Anno.idx,]
+
 
 if(arraytype =="EPICv2"){
 Anno.Info <- mani[!is.na(mani$MAPINFO),]
 Anno.Info <- Anno.Info[!is.na(Anno.Info$CHR),]
+Anno.Info <- Anno.Info[!grepl("chr0",Anno.Info$CHR),]
 Anno.Info$CHR <- factor(Anno.Info$CHR, levels = CHR.levels)
 Anno.Info <- Anno.Info[order(Anno.Info$CHR,Anno.Info$MAPINFO),]
 Anno.CHR <- as.character(Anno.Info$CHR)
 Anno.Pos <- Anno.Info$MAPINFO
+Anno.Info$Name <- rownames(Anno.Info)
+
 }
 
 if(arraytype == "EPICv1" | arraytype == "450K"){
@@ -155,11 +161,11 @@ Anno.Pos <- (Anno.Info$Start_hg38) + 1
 
 names(Anno.CHR) <- Anno.Info$Name
 names(Anno.Pos) <- Anno.Info$Name
-CpG.idx <- intersect(rownames(meth),rownames(Anno.Info))
+#CpG.idx <- intersect(rownames(meth),rownames(Anno.Info))
 
 probe.cluster <- bumphunter::clusterMaker(Anno.CHR, Anno.Pos, maxGap=probe_gap)
 names(probe.cluster) <- Anno.Info$Name
-bumphunter.idx <- CpG.idx[which(probe.cluster %in% names(which(table(probe.cluster)>=nProbes)))]
+bumphunter.idx <- Anno.idx[which(probe.cluster %in% names(which(table(probe.cluster)>=nProbes)))]
 
 Bump.Anno.CHR <- Anno.CHR[bumphunter.idx]
 Bump.Anno.Pos <- Anno.Pos[bumphunter.idx]
@@ -210,7 +216,7 @@ GRange.df <- mani[,GRange.colnm.idx1]
 GRange.sup.info <- mani[,GRange.colnm.idx2]
 colnames(GRange.sup.info) <- c("Genomic.featrue","CGI.feature","gene","CpGid")
 
-seqlm_anno <- GenomicRanges::makeGRangesFromDataFrame(Granges.df, seqnames.field=c("CHR"), start.field = c("MAPINFO"), end.field = c("MAPINFO"), strand.field = c("Strand_FR"))
+seqlm_anno <- GenomicRanges::makeGRangesFromDataFrame(GRange.df, seqnames.field=c("CHR"), start.field = c("MAPINFO"), end.field = c("MAPINFO"), strand.field = c("Strand_FR"))
 seqlm_anno@elementMetadata@listData <- as.list(GRange.sup.info)
 }
 
@@ -301,7 +307,7 @@ probe_gap = 500
 }
 
 
-myannotation <- DMRcate::cpg.annotate("array", object=meth, what = "M", arraytype = arraytype, epicv2Remap = TRUE, analysis.type=analysis.type, design=design.mat, coef=ncol(design.mat), fdr=dmp.fdr)
+myannotation <- DMRcate::cpg.annotate("array", object=meth, what = "M", arraytype = arraytype, epicv2Remap = TRUE, analysis.type="differential", design=design.mat, coef=ncol(design.mat), fdr=dmp.fdr)
 
 myannotationGlist <- as(myannotation@ranges,"GRangesList")
 dmrcoutput <- DMRcate::dmrcate(myannotation, min.cpgs = nProbes, lambda=probe_gap, C=C, pcutoff ='fdr', betacutoff=NULL)

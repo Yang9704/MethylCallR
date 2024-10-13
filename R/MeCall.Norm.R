@@ -1,9 +1,9 @@
 #' Normalization of methylation level
 #'
-#' @import ChAMP
-#' @import minfi
-#' @importFrom ENmix preprocessENmix
-#' @importFrom wateRmelon adjustedFunnorm adjustedDasen dasen
+#' @Import ChAMP
+#' @Import minfi
+#' @ImportFrom ENmix preprocessENmix
+#' @ImportFrom wateRmelon adjustedFunnorm adjustedDasen dasen
 #'
 #'
 #' @description
@@ -23,10 +23,7 @@
 #' Due to variations in input formats required by each normalization algorithm,
 #' we recommend to utilize the return object of `MethylCallR.filtering()` function.
 #' 
-#' The interpolatedXY step is an additional process that normalizes CpG sites on sex chromosomes 
-#' without bias based on independently normalized autosomal CpG sites. This step can be utilized 
-#' when the method parameter is set to `Funn` or `dasen`. For more details, refer to 
-#' [wateRmelon::adjustedFunnorm()] and [wateRmelon::adjustedDasen()].
+#' The interpolatedXY step is an additional process that normalizes CpG sites on sex chromosomes without bias based on independently normalized autosomal CpG sites. This step can be utilized when the method parameter is set to `Funn` or `dasen`. For more details, refer to [wateRmelon::adjustedFunnorm()] and [wateRmelon::adjustedDasen()].
 #'
 #' @param data A return object from `MeCall.filtering()`.
 #' @param method Normalization method ("BMIQ","Funn","SWAN","ENmix","dasen","Noob").
@@ -76,65 +73,174 @@
 #' @examples
 #' \dontrun{
 #' # For [functional normalization] and [Beta-value]
-#' data.Norm.FUNN <- MeCall.Norm(data = data.filtered, method = c("Funn"), offset=100, 
-#' return.type = "B")
+#' data.Norm.FUNN <- MeCall.Norm(data = data.filtered, method = c("Funn"), offset=100) 
 #'
 #' # For [BMIQ] and [M-value]
-#' data.Norm.BMIQ <- MeCall.Norm(data = data.filtered, method = c("BMIQ"), offset=100, 
-#' return.type = "M")
+#' data.Norm.BMIQ <- MeCall.Norm(data = data.filtered, method = c("BMIQ"), offset=100)
 #' }
 #'
 #' @export
-MeCall.Norm <- function(data = filtered, method=c("BMIQ","Funn","SWAN","ENmix","dasen","Noob"),InterpolatedXY = FALSE, offset = 100, return.type = "M"){
-filtered.CpG <- unique(unlist(data$filtered.CpG.list))
+MeCall.Norm <- function(data = filtered, method=c("BMIQ","Funn","SWAN","ENmix","dasen","Noob"),InterpolatedXY = FALSE, offset = 100){
+
 Normlist=c("BMIQ","Funn","SWAN","ENmix","dasen","Noob")
 
-if(!method %in% Normlist){
-stop("\n[MeCall]-!!ERROR!! : Please check your method parameter. You may select whithin BMIQ, Funn, SWAN, ENmix, dasen, and Noob")
+mod.data <- data
 
-}else if(method == "BMIQ"){
+if(!all(method %in% Normlist)){
+stop("\n[MeCall]-!!ERROR!! : Please check your method parameter. You may select the method whithin BMIQ, Funn, SWAN, ENmix, dasen, and Noob")}
+
+
+if(length(method) >= 2){
+m.ck <- method[-1]
+rgs <- c("Funn","SWAN","ENmix","Noob")
+if(any(m.ck %in% rgs)){
+stop("\n[MeCall]-!!ERROR!! : Due to the input format (RGchannel-Set), Funn, SWAN, ENmix, and Noob should be used in first.")
+}}
+
+
+for (i in c(1:length(method))){
+
+pr.method <- method[i]
+
+if(pr.method == "BMIQ"){
+mod.data <- BMIQ.f(mod.data)
+}
+
+if(pr.method == "Funn"){
+mod.data <- Funn.f(mod.data,InterpolatedXY,offset)
+}
+
+if(pr.method == "SWAN"){
+mod.data <- SWAN.f(mod.data,offset)
+}
+
+if(pr.method == "ENmix"){
+mod.data <- ENmix.f(mod.data,offset)
+}
+
+if(pr.method == "dasen"){
+mod.data <- dasen.f(mod.data,InterpolatedXY,offset)
+}
+
+if(pr.method == "Noob"){
+mod.data <- Noob.f(mod.data,offset)
+}
+}
+
+mod.data$beta[mod.data$beta <= 0] <- 0.00001
+mod.data$beta[mod.data$beta >= 1] <- 0.99999
+
+return(mod.data)}
+
+
+# [BMIQ]------------------------------------
+BMIQ.f <- function(data){
+if(is.null(data$beta)){
+stop("\n[MeCall]-!!ERROR!! : Beta-value matrix is not founded.")
+}
 message("\n[MeCall]-[notice] : [BMIQ] method was selected for normalization procedure.")
-message("                    Beta-value matrix is used for BMIQ normalization.")
+message("                    Methylation level matrices (Beta and M) will be returned.")
 
-suppressMessages(beta.n <- champ.norm(beta=data$beta, method="BMIQ", arraytype=data$TAG))
+if(data$TAG == "EPICv2"){
+beta <- data$beta
+beta[beta <= 0] <- 0.0001
+beta[beta >= 1] <- 0.9999
+mani <- callmanifest(data$TAG)
+design.v <- subset(mani, rownames(mani) %in% rownames(beta))[rownames(beta),]$Infinium_Design_Type
+names(design.v) <- rownames(beta)
+
+suppressMessages(beta.n <- lapply(c(1:ncol(beta)), function(x){n.beta.v <- gmqn::BMIQ(beta[,x], design.v)}))
+beta.n <- as.matrix(do.call(cbind,beta.n))
+
+
+}else{
+suppressMessages(library(ChAMPdata))
+suppressMessages(beta.n <- ChAMP::champ.norm(beta=data$beta, method="BMIQ", arraytype=data$TAG))
+}
+
 colnames(beta.n) <- colnames(data$beta)
 rownames(beta.n) <- rownames(data$beta)
-if(return.type == "M"){n.meth <- BetatoM(beta.n)
-}else {n.meth <- beta.n}
+beta.val <- beta.n
+M.val <- BetatoM(beta.n)
 
-}else if(method =="Funn"){
+OUTobj <- list(beta = beta.val, M = M.val, pd = data$pd, TAG = data$TAG, minfi.Set= NULL,filtered.Sample.list = data$filtered.Sample.list, filtered.CpG.list = data$filtered.CpG.list)
+
+return(OUTobj)}
+
+# [FUNN]------------------------------------
+Funn.f <- function(data,InterpolatedXY,offset){
+if(is.null(data$minfi.Set$rgSet)){
+stop("\n[MeCall]-!!ERROR!! : RGchannel-Set is not founded.")
+}
+filtered.CpG <- unique(unlist(data$filtered.CpG.list))
+
 message("\n[MeCall]-[notice] : [Functional normalization] method was selected for normalization procedure.")
-message("                    rgSet is used for functional normalization.")
+message("                    Methylation level matrices (Beta and M) and mSet will be returned.")
+
 rgSet <- data$minfi.Set$rgSet
 if(InterpolatedXY){
 message("\n[MeCall]-[notice] : [interpolatedXY] method is activated. This function utilizes the [adjustedFunnorm] function included in wateRmelon R package. For more details, please refer to the following paper: [Yucheng Wang, Bioinformatics, 2022].")
 normed <- wateRmelon::adjustedFunnorm(rgSet,nPCs=2, sex = NULL, bgCorr = TRUE,dyeCorr = TRUE, keepCN = TRUE, ratioConvert = FALSE,verbose = TRUE)
 } else {normed <- preprocessFunnorm(rgSet,nPCs=2, sex = NULL, bgCorr = TRUE,dyeCorr = TRUE, keepCN = TRUE, ratioConvert = FALSE,verbose = TRUE)}
 
-if(return.type == "M"){n.meth <- toM(f.out.b.norm(normed,filtered.CpG),offset = offset)
-}else {n.meth <- toBeta(f.out.b.norm(normed,filtered.CpG),offset = offset)}
+mset.n <- f.out.b.norm(normed,filtered.CpG)
+beta.val <- toBeta(mset.n,offset)
+M.val <- toM(mset.n,offset)
 
-}else if(method == "SWAN"){
+OUTobj <- list(beta = beta.val, M = M.val, pd = data$pd, TAG = data$TAG, minfi.Set= list(rgSet = NULL, mSet = mset.n),filtered.Sample.list = data$filtered.Sample.list, filtered.CpG.list = data$filtered.CpG.list)
+
+return(OUTobj)}
+
+# [SWAN]------------------------------------
+SWAN.f <- function(data,offset){
+filtered.CpG <- unique(unlist(data$filtered.CpG.list))
+if(is.null(data$minfi.Set$rgSet)){
+stop("\n[MeCall]-!!ERROR!! : RGchannel-Set is not founded.")
+}
+
 message("\n[MeCall]-[notice] : [SWAN] method was selected for normalization procedure.")
-message("                    rgSet and mSet are used for SWAN normalization.")
+message("                    Methylation level matrices (Beta and M) and mSet will be returned.")
+
 rgSet <- data$minfi.Set$rgSet
 mSet <- minfi::preprocessRaw(rgSet)
 normed <- preprocessSWAN(rgSet,mSet)
 normed <- f.out.b.norm(normed,filtered.CpG)
-if(return.type == "M"){n.meth <- toM(mSet = normed,offset = offset)
-}else {n.meth <- toBeta(mSet = normed,offset = offset)}
 
-}else if(method =="ENmix"){
-message("\n[MeCall]-[notice] : [Enmix] method was selected for normalization procedure.")
-message("                    rgSet is used for ENmix normalization.")
+beta.val <- toBeta(normed,offset)
+M.val <- toM(normed,offset)
+
+OUTobj <- list(beta = beta.val, M = M.val, pd = data$pd, TAG = data$TAG, minfi.Set= list(rgSet = NULL, mSet = normed),filtered.Sample.list = data$filtered.Sample.list, filtered.CpG.list = data$filtered.CpG.list)
+
+return(OUTobj)}
+
+# [ENmix]------------------------------------
+ENmix.f <- function(data,offset){
+filtered.CpG <- unique(unlist(data$filtered.CpG.list))
+if(is.null(data$minfi.Set$rgSet)){
+stop("\n[MeCall]-!!ERROR!! : RGchannel-Set is not founded.")
+}
 rgSet <- data$minfi.Set$rgSet
+message("\n[MeCall]-[notice] : [Enmix] method was selected for normalization procedure.")
+message("                    Methylation level matrices (Beta and M) and mSet will be returned.")
 normed <- ENmix::preprocessENmix(rgSet, bgParaEst="oob", dyeCorr="RELIC", QCinfo=NULL, exCpG=filtered.CpG, nCores=4)
-if(return.type == "M"){n.meth <- toM(f.out.b.norm(normed,c()),offset = offset)
-}else {n.meth <- toBeta(f.out.b.norm(normed,c()),offset = offset)}
 
-}else if(method == "dasen"){
+normed <- f.out.b.norm(normed,filtered.CpG)
+
+beta.val <- toBeta(normed,offset)
+M.val <- toM(normed,offset)
+
+OUTobj <- list(beta = beta.val, M = M.val, pd = data$pd, TAG = data$TAG, minfi.Set= list(rgSet = NULL, mSet = normed),filtered.Sample.list = data$filtered.Sample.list, filtered.CpG.list = data$filtered.CpG.list)
+return(OUTobj)}
+
+# [dasen]------------------------------------
+dasen.f <- function(data,InterpolatedXY,offset){
+filtered.CpG <- unique(unlist(data$filtered.CpG.list))
+if(is.null(data$minfi.Set$mSet)){
+stop("\n[MeCall]-!!ERROR!! : Methyl-Set is not founded.")
+}
+
 message("\n[MeCall]-[notice] : [dasen] method was selected for normalization procedure.")
-message("                    mSet is used for dasen normalization.")
+message("                    Methylation level matrices (Beta and M) will be returned.")
 mSet <- f.out.b.norm(data$minfi.Set$mSet,filtered.CpG)
 mn<- mSet@assays@data@listData$Meth
 un <- mSet@assays@data@listData$Unmeth
@@ -159,19 +265,31 @@ colnames(beta.n) <- names(colnames(beta.n))
 beta.n <- dasen(mns = mn, uns = un, onetwo=onetwo, fudge = offset, ret2=FALSE)
 colnames(beta.n) <- names(colnames(beta.n))
 }
-if(return.type == "M"){n.meth <- BetatoM(beta.n)
-}else {n.meth <- beta.n}
-}else{
-message("\n[MeCall]-[notice] : [Noob] method was selected for normalization procedure.")
-message("                    rgSet is used for Noob normalization.")
 
-normed <- preprocessNoob(rgSet=data$minfi.Set$rgSet, offset = offset, dyeCorr = TRUE, verbose = FALSE, dyeMethod="single")
-if(return.type == "M"){n.meth <- toM(f.out.b.norm(normed,filtered.CpG),offset = offset)
-}else {n.meth <- toBeta(f.out.b.norm(normed,filtered.CpG),offset = offset)}
+mset.n <- beta.n
+beta.val <- toBeta(normed,offset)
+M.val <- toM(normed,offset)
+
+OUTobj <- list(beta = beta.val, M = M.val, pd = data$pd, TAG = data$TAG, minfi.Set= list(rgSet = NULL, mSet = mset.n),filtered.Sample.list = data$filtered.Sample.list, filtered.CpG.list = data$filtered.CpG.list)
+
+return(OUTobj)}
+
+# [Noob]------------------------------------
+Noob.f <- function(data,offset){
+filtered.CpG <- unique(unlist(data$filtered.CpG.list))
+if(is.null(data$minfi.Set$rgSet)){
+stop("\n[MeCall]-!!ERROR!! : RGchannel-Set is not founded.")
 }
 
-if(return.type != "M"){
-n.meth[n.meth <= 0] <- 0.00001
-n.meth[n.meth >= 1] <- 0.99999}
+message("\n[MeCall]-[notice] : [Noob] method was selected for normalization procedure.")
+message("                    Methylation level matrices (Beta and M) and mSet will be returned.")
+normed <- preprocessNoob(rgSet=data$minfi.Set$rgSet, offset = offset, dyeCorr = TRUE, verbose = FALSE, dyeMethod="single")
 
-return(n.meth)}
+mset.n <- f.out.b.norm(normed,filtered.CpG)
+beta.val <- toBeta(mset.n,offset)
+M.val <- toM(mset.n,offset)
+
+OUTobj <- list(beta = beta.val, M = M.val, pd = data$pd, TAG = data$TAG, minfi.Set= list(rgSet = NULL, mSet = mset.n),filtered.Sample.list = data$filtered.Sample.list, filtered.CpG.list = data$filtered.CpG.list)
+
+return(OUTobj)}
+

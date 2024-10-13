@@ -5,7 +5,7 @@
 \title{Generate model matrix for differential methylation analysis.}
 \usage{
 MeCall.MakeModelMatrix(
-  pd = MeCall.FindBatch$modified.pd,
+  pd = data.rmBatch$modified.pd,
   covariate = c("Age", "Sex"),
   interest = "Sample_Group",
   PCA.result = data.PCA,
@@ -52,7 +52,7 @@ and a data frame that includes covariate information.
 \examples{
 \dontrun{
 # Run [MeCall.MakeModelMatrix] with default setting.
-data.design <- MeCall.MakeModelMatrix(pd = MeCall.FindBatch$modified.pd, 
+data.design <- MeCall.MakeModelMatrix(pd = data.rmBatch$modified.pd, 
 covariate = c("Age","Sex"), interest = "Sample_Group", PCA.result = data.PCA, n.pc = 2, 
 Cell.comp = data.CellComp$cell.composition, celltypes = colnames(data.CellComp$cell.composition),
 adjustment=FALSE, meth=NULL)

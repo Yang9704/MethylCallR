@@ -5,13 +5,13 @@
 \title{Perform differential methylation analysis to identify differentially methylated probes (DMPs).}
 \usage{
 MeCall.DMP(
-  meth = MeCall.CellComp$adjusted.meth,
-  pd = MeCall.RemoveBatch$modified.pd,
+  meth = data.CellComp$adjusted.meth,
+  pd = data.rmBatch$modified.pd,
   interest = "Sample_Group",
   design = data.design,
   cutoff.P = 1,
   multi.P = "BH",
-  arraytype = "EPICv1"
+  arraytype = c("450k", "EPICv1", "EPICv2")
 )
 }
 \arguments{
@@ -52,8 +52,8 @@ the GRCh37/hg19 human reference is included as additional information.
 \examples{
 \dontrun{
 # Run [MeCall.DMP] with default setting.
-data.DMPs <- MeCall.DMP(meth = MeCall.CellComp$adjusted.meth, 
-pd = MeCall.RemoveBatch$modified.pd, interest = "Sample_Group", design = data.design, 
+data.DMPs <- MeCall.DMP(meth = data.CellComp$adjusted.meth, 
+pd = data.rmBatch$modified.pd, interest = "Sample_Group", design = data.design, 
 cutoff.P=1, multi.P = 'BH', arraytype="EPICv1")
 }
 

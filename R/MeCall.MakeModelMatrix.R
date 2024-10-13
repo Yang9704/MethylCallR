@@ -30,14 +30,14 @@
 #' @examples
 #' \dontrun{
 #' # Run [MeCall.MakeModelMatrix] with default setting.
-#' data.design <- MeCall.MakeModelMatrix(pd = MeCall.FindBatch$modified.pd, 
+#' data.design <- MeCall.MakeModelMatrix(pd = data.rmBatch$modified.pd, 
 #' covariate = c("Age","Sex"), interest = "Sample_Group", PCA.result = data.PCA, n.pc = 2, 
 #' Cell.comp = data.CellComp$cell.composition, celltypes = colnames(data.CellComp$cell.composition),
 #' adjustment=FALSE, meth=NULL)
 #' }
 #'
 #' @export
-MeCall.MakeModelMatrix <- function(pd = MeCall.FindBatch$modified.pd, covariate = c("Age","Sex"), interest = "Sample_Group", PCA.result = data.PCA, n.pc = 2, Cell.comp = data.CellComp$cell.composition, celltypes = colnames(data.CellComp$cell.composition), adjustment=FALSE, meth=NULL){
+MeCall.MakeModelMatrix <- function(pd = data.rmBatch$modified.pd, covariate = c("Age","Sex"), interest = "Sample_Group", PCA.result = data.PCA, n.pc = 2, Cell.comp = data.CellComp$cell.composition, celltypes = colnames(data.CellComp$cell.composition), adjustment=FALSE, meth=NULL){
 message("\n[MeCall]-[notice] : Make design matrix with given input parameters.")
 cov = FALSE
 pca = FALSE
