@@ -1,0 +1,673 @@
+---
+title: "MethylCallR_data_processing_with_public_EPICv2_data"
+author: "Hyun-Ho, Yang"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+## Summary
+This example shows that some example to use the functions in `MethylCallR` with the EPICv2 public data from the Gene Expression Omnibus (GEO).
+
+In this example, we use GSE240469, which consists of a total of 40 EPICv2 data samples. This dataset was generated using prostate and breast tissue, as well as cell line samples, under various experimental conditions to evaluate the performance of the EPICv2 array (Peters TJ et al., 2024).
+
+Since this example is aimed to explain how to execute the functions and interpret the results, biological interpretation is not included. If you plan to analyze actual research data using this example, please keep this in mind.
+
+If you want to see a more representative example of actual data analysis, please refer to the "MethylCallR_EWAS_tutorial" document. This document provides an example of conducting an Epigenome-Wide Association Study (EWAS) as included in the original manuscript of `MethylCallR`.
+
+
+## Data preparation
+Raw idat files are available on NCBI GEO database 
+(https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE240469).
+
+The downloaded raw IDAT files should be unzipped and placed in the same directory. In this example, we assumed that the raw IDAT files were stored in "/user/MethylCallR_Test/GSE240469/".
+
+To import IDAT files, the sample data file should be provided which containing the essential information required to conduct MethylCallR. This file can be found in "MethylCallR/doc/MethylCallR_data_processing_with_public_EPICv2_data/MethylCallR_data_processing_with_public_EPICv2_data_Files".
+
+We assumed that the sample data file was saved in "/user/MethylCallR_Test/GSE240469/GSE240469_sample_data.csv".
+
+This file is a modified version of the series matrix file downloaded from GEO, formatted to match the input requirements of `MethylCallR`.
+
+The sample data file should contain columns named "Sample_Name", "Sentrix_ID" ("Slide"), and "Sentrix_Position" ("array").
+
+`MethylCallR` finds IDAT files using the sentrix_id and sentrix_position columns.
+If either value is missing (`NA`), it will attempt to find the IDAT file using the available information from the other column. 
+If user data provides only one piece of information, it is essential that the provided value is sufficiently specific to accurately identify the correct IDAT file.
+
+## Data Import
+
+The raw IDAT file is imported to R environment using the `illuminaio` R package (Smith et al., 2013). `MeCall.ReadIdat` function returns a list object consisting of various data for quality control and downstream analysis.
+
+```{r Chunk1, include=FALSE}
+data.Import <- MeCall.ReadIdat(idat.dir = "/user/MethylCallR_Test/GSE240469/", pd.file = "/user/MethylCallR_Test/GSE240469/GSE240469_sample_data.csv", offset = 100, platform = c("EPICv2"))
+```
+
+```{r Chunk1-1, include=FALSE}
+names(data.Import)
+# [1] "beta"      "M"         "intensity" "Meth"      "Unmeth"    "detP"     
+# [7] "B.count"   "pd"        "TAG"       "minfi.Set"
+
+data.Import$beta[1:4,1:4]
+#                PREC_500_1 PREC_250_1 PREC_125_1 LNCAP_500_1
+#cg25335775_BC21 0.03265337 0.04079333 0.04031894  0.06325657
+#cg25341653_BC21 0.03285140 0.03402900 0.04170767  0.03912336
+#cg25372195_BC21 0.48031660 0.49373626 0.49462366  0.20315530
+#cg25411725_BC21 0.74570149 0.74207453 0.76820542  0.54118464
+
+data.Import$B.count[1:4,1:4]
+#                PREC_500_1 PREC_250_1 PREC_125_1 LNCAP_500_1
+#cg25335775_BC21         14         15         13           5
+#cg25341653_BC21         16         15         12          17
+#cg25372195_BC21          9         16         11          10
+#cg25411725_BC21         11         17         18           8
+
+data.Import$minfi.Set$rgSet
+#class: RGChannelSet 
+#dim: 1105209 40 
+#metadata(0):
+#assays(2): Green Red
+#rownames(1105209): 1600157 1600179 ... 99810982 99810990
+#rowData names(0):
+#colnames(40): PREC_500_1 PREC_250_1 ... Gar15-13_Vehicle_4
+#  Gar15-13_Decitabine_1
+#colData names(5): Sample_Name Slide array Cell_type Tissue_type
+#Annotation
+#  array: IlluminaHumanMethylationEPICv2
+#  annotation: 20a1.hg38
+
+data.Import$minfi.Set$mSet
+#class: MethylSet 
+#dim: 937055 40 
+#metadata(0):
+#assays(2): Meth Unmeth
+#rownames(937055): cg25335775_BC21 cg25341653_BC21 ...
+#  nv-GRCh38-chr7-152265113-152265113-C-A_BC11
+#  nv-GRCh38-chr7-152265113-152265113-C-T_TC11
+#rowData names(0):
+#colnames(40): PREC_500_1 PREC_250_1 ... Gar15-13_Vehicle_4
+#  Gar15-13_Decitabine_1
+#colData names(5): Sample_Name Slide array Cell_type Tissue_type
+#Annotation
+#  array: IlluminaHumanMethylationEPICv2
+#  annotation: 20a1.hg38
+#Preprocessing
+#  Method: NA
+#  minfi version: NA
+#  Manifest version: NA
+```
+
+As mentioned above, `MethylCallR` reads the IDAT files based on the "Sentrix_ID" ("Slide") and "Sentrix_Position" ("array").
+
+```{r Chunk1-2, include=FALSE}
+head(data.Import$pd)
+#            Sample_Name      Slide array   Cell_type Tissue_type
+#PREC_500_1   PREC_500_1 GSM7698435    NA  PrEC cells   Cell line
+#PREC_250_1   PREC_250_1 GSM7698436    NA  PrEC cells   Cell line
+#PREC_125_1   PREC_125_1 GSM7698437    NA  PrEC cells   Cell line
+#LNCAP_500_1 LNCAP_500_1 GSM7698438    NA LNCaP cells   Cell line
+#LNCAP_250_1 LNCAP_250_1 GSM7698439    NA LNCaP cells   Cell line
+#LNCAP_125_1 LNCAP_125_1 GSM7698440    NA LNCaP cells   Cell line
+```
+
+
+## Quality control
+
+Using `MeCall.Filtering`, various conditions can be applied to select and remove probes. 
+Probes are selected and removed based on the following criteria:
+1. Detection P-value
+2. Bead count
+3. No CG region
+4. SNP associated probe
+5. Multi-hit probes
+6. Sex chromosome probes
+7. FLAG probes
+8. hg38 mapping filed probes
+9. Duplicated probes (EPICv2 only) 
+
+The EPICv2 array contains multiple probes that detect the same CpG sites (duplicated probes), a feature absent in previous versions of the Illumina methylation microarray. 
+Therefore, when using algorithms based on references developed from previous versions of the array or when integrating data for meta-analysis, it is important to adjust these appropriately. 
+`MethylCallR` manages this through two specific conditions:
+1. probes that are exactly same with the probes from previous versions (EPICv1 or 450K)
+2. superior probes based on previous research (Peters TJ et al., 2024)
+
+To address this, `MethylCallR` provides a list of duplicated probes that do not meet the two specified conditions. 
+Users can use this list to create chain files and convert the array version. 
+For more detailed information, please refer to the document "MethylCallR_address_chain_file_and_array_conversion" located in the `/MethylCallR/doc/MethylCallR_address_chain_file_and_array_conversion` directory.
+
+In this example, we utilize the list provided by `MethylCallR` (`RemoveDup = "MethylCallR"`).
+
+The function prints the summarized counts of filtered samples and probes.
+Additionally, detailed information can be obtained from the returned object (`data.filtered`).
+
+```{r Chunk2, include=FALSE}
+data.filtered <- MeCall.Filtering(data = data.Import, RemoveDup = "MethylCallR", badSample.minfi = TRUE, badSampleCutoff.minfi = 10.5, detectionP = TRUE, detP.probe.cutoff = 0.01, detP.sample.cutoff = 0.1, detP.failed.ratio = 0, beadcount = TRUE, beadcutoff = 0.05, NoCG = TRUE, SNPmask = TRUE, population = "General", Multihit = TRUE, Multihit.method = "WGBS" ,Sexchr = "XY", FLAG = TRUE, hg38.mapfail = TRUE)
+```
+
+```{r Chunk2-1, include=FALSE}
+#[MeCall]-[notice] : The number of samples removed : [2]
+#
+#[MeCall]-[notice] : The number of CpGs removed by criteria of detection p-value : [62279]
+#                                                              Bead Count : [2812]
+#                                                              No CG region : [3738]
+#                                                              SNP associated CpGs : [31945]
+#                                                              Multi-Hit CpGs : [11759]
+#                                                              Sex chromosome CpGs : [24518]
+#                                                              FLAGed CpGs : [50209]
+#                                                              GRCh38/hg38 Mapping failed CpGs : [7516]
+#                                                              Duplicated probes in EPICv2 : [6963]
+#
+#[MeCall]-[notice] : Total number of filtered out CpGs : [144271]
+#
+#[MeCall]-[notice] : Total number of remained samples : [38]
+#                                    remained CpGs : [792736]
+```
+
+```{r Chunk2-2, include=FALSE}
+names(data.filtered)
+# [1] "beta"                 "M"                    "intensity"           
+# [4] "Meth"                 "Unmeth"               "pd"                  
+# [7] "TAG"                  "minfi.Set"            "filtered.Sample.list"
+#[10] "filtered.CpG.list" 
+
+str(data.filtered$filtered.Sample.list)
+# chr [1:2] "LNCAP_250_1" "HCI-005_Decitabine_1"
+
+str(data.filtered$filtered.CpG.list)
+#List of 9
+# $ detectP          : chr [1:62279] "cg03683899_BC11" "cg06221449_BC11" #"cg12941754_TC11" "cg01938978_TC11" ...
+# $ B.count          : chr [1:2812] "cg07819926_BC11" "cg22223602_TC11" #"cg21584422_BC11" "cg05650055_TC11" ...
+# $ NoCG             : chr [1:3738] "nv-GRCh38-chr17-7676056-7676056-C-G_BO11" "nv-GRCh38-chr17-7676056-7676056-C-A_TO11" "nv-GRCh38-chr22-41170456-41170456-A-C_TO11" "nv-GRCh38-chr22-41169519-41169519-T-G_TO11" ...
+# $ SNP.associated   : chr [1:31945] "cg05113908_BC11" "cg05650055_TC11" "cg06634576_BC11" "cg27298349_TC11" ...
+# $ Multi.hit        : chr [1:11759] "cg21879320_BC11" "cg13726504_TC11" "cg06489391_BC11" "cg06739855_TC11" ...
+# $ Sex.chromosome   : chr [1:24518] "cg00662775_TC11" "cg05113908_BC11" "cg12614178_BC11" "cg12782125_BC11" ...
+# $ FLAG             : chr [1:50209] "cg07595134_BC11" "cg12614667_TC11" "cg03683899_BC11" "cg11674865_BC11" ...
+# $ hg38.mapping.fail: chr [1:7516] "cg00002127_BC11" "cg00002602_TC21" "cg00002605_BC21" "cg00004686_BC21" ...
+# $ Duplicated.probes: chr [1:6963] "cg00002033_TC12" "cg00002426_BC22" "cg00012692_BC12" "cg00016699_BC22" ...
+
+dim(data.filtered$beta)
+#[1] 792736     38
+
+```
+
+
+## Normalization
+
+`MethylCallR` includes 6 different normalization methods.
+1. Beta-mixture quantile normalization (BMIQ) (Teschendorff AE et al., 2013)
+2. Functional normalization (Funn) (Fortin et al., 2014)
+3. Subset-quantile within array normalization (SWAN) (Maksimovic et al., 2012)
+4. Exponential-Normal mixture signal intensity background correction (ENmix) (Xu et al., 2016)
+5. dasen (dasen) (Pidsley et al., 2013)
+6. normal-exponential out-of-band normalization (Noob) (Triche et al., 2013)
+
+Users can conduct the multiple normalization methods by providing them in the `method` parameter in the specified order. For example, entering `method = c("Noob", "BMIQ")` will sequentially perform Noob normalization followed by BMIQ normalization.
+
+```{r Chunk3, include=FALSE}
+data.norm <- MeCall.Norm(data = data.filtered, method=c("Noob","BMIQ"), InterpolatedXY = FALSE, offset = 100)
+```
+
+```{r Chunk3-1, include=FALSE}
+data.norm$beta[1:4,1:4]
+#                PREC_500_1 PREC_250_1 PREC_125_1 LNCAP_500_1
+#cg25324105_BC11 0.02536263 0.03418311 0.03190609  0.02189860
+#cg25383568_TC11 0.89969640 0.90718004 0.90241777  0.87098303
+#cg25455143_BC11 0.02665985 0.02462007 0.02267730  0.02221685
+#cg25459778_BC11 0.02830180 0.02797459 0.02474573  0.03164744
+```
+
+The inputs for `Funn`, `SWAN`, `ENmix`, and `Noob` are not compatible with the outputs of other normalization methods. 
+Therefore, they can only be used as the initial method in the sequence.
+
+For `Funn` and `dasen`, users can use the `InterpolatedXY `option, which separates probes located on the sex chromosomes and performs normalization independently (Wang Y et al., 2022). 
+If users did not remove the probes on the sex chromosomes during the filtering step, users may want to consider applying this option.
+
+```{r Chunk4, include=FALSE}
+data.norm <- MeCall.Norm(data = data.filtered, method = c("Funn"), InterpolatedXY = TRUE, offset = 100)
+```
+
+By using the function, a list object is returned that contains the normalized data (beta-values, M-values, and MethylSet) and additional information such as sample data and array type.
+
+## Outlier detection
+
+`MethylCallR` provides a method for detecting potential outliers based on Mahalanobis distance (Mahalanobis, 1936).
+
+It repeatedly tests random subsets of samples within each group to calculate the outlier detection rate for every sample.
+
+Users can select one of the columns in the sample data to categorize the samples into groups, enabling the estimation of potential outliers within each group.
+
+By setting the `plot` parameter to `TRUE`, a scatter plot will be generated that includes the outlier criteria for each group.
+
+```{r Chunk5, include=FALSE}
+data.outlier <- MeCall.Outlier(meth = data.norm$beta, pd = data.norm$pd ,group = "Tissue_type" ,nrep=1000, sample.fraction = 0.9, conf= 0.999, n.component =2 ,plot = TRUE)
+```
+
+```{r Chunk5-1, include=FALSE}
+data.outlier$Obvious.outlier
+NULL
+
+data.outlier$Suggestive.outlier
+NULL
+
+data.outlier$Plot
+```
+
+
+## Identification of batch effect
+
+`MethylCallR` can generate a heatmap to visualize the associations between the variables included in the sample data and the methylation level data.
+
+This allows users to identify the batch effects that need to be corrected.
+
+If there are any missing values, the calculation cannot be performed. 
+Therefore, ensure that any missing values in the array column are converted to an empty string (`""`).
+
+```{r Chunk6, include=FALSE}
+data.norm$pd$array <- ""
+
+data.findbatch <- MeCall.FindBatch(meth = data.norm$beta, pd = data.norm$pd, batches = NULL, n.comp = 0)
+```
+
+```{r Chunk6-1, include=FALSE}
+data.findbatch
+```
+
+The center of each tile in the heatmap displays the correlation coefficient between the variables and the principal components. 
+Significant relationships (p < 0.05) are represented by blue tiles, with darker shades of blue indicating lower p-values.
+
+
+## Controlling batch effect
+
+In `MethylCallR`, the `combat` algorithm can be used to remove known batch effects (Johnson et al., 2007). 
+By specifying the names of the batch effects to be removed in the `batches` argument, the correction will be performed in the specified order.
+
+In this example, there were no removable batch effects present in the sample data, so it was set to `NULL`.
+
+```{r Chunk7, include=FALSE}
+data.rmbatch <- MeCall.RemoveBatch(meth = data.norm$beta, pd = data.norm$pd, batches = NULL, interest="Tissue_type", do.sva= FALSE, exception = NULL)
+```
+
+```{r Chunk7-1, include=FALSE}
+#[MeCall]-[question]  select case group : Prostate tumour,Breast cancer PDX model HCI-005,Breast cancer PDX model Gar15-13
+
+#[MeCall]-[question]   select control group : Cell line
+```
+
+```{r Chunk7-2, include=FALSE}
+names(data.rmbatch)
+#[1] "methylation.level" "modified.pd"       "groups"
+
+head(data.rmbatch$modified.pd)
+#            Sample_Name      Slide array       Cell_type Tissue_type
+#PREC_500_1   PREC_500_1 GSM7698435    NA      PrEC cells        Base
+#PREC_250_1   PREC_250_1 GSM7698436    NA      PrEC cells        Base
+#PREC_125_1   PREC_125_1 GSM7698437    NA      PrEC cells        Base
+#LNCAP_500_1 LNCAP_500_1 GSM7698438    NA     LNCaP cells        Base
+#LNCAP_125_1 LNCAP_125_1 GSM7698440    NA     LNCaP cells        Base
+#SYN_12543     SYN_12543 GSM7698441    NA Prostate tumour        Case
+#            original.interest
+#PREC_500_1          Cell line
+#PREC_250_1          Cell line
+#PREC_125_1          Cell line
+#LNCAP_500_1         Cell line
+#LNCAP_125_1         Cell line
+#SYN_12543     Prostate tumour
+```
+
+Additionally, in `MethylCallR`, users can set the `do.sva` parameter to `TRUE` to identify and remove unknown batch effects using Surrogate Variable Analysis (`SVA`) (Leek and Storey, 2007).
+
+To prevent meaningful information from being included in the surrogate variables, users can include relevant variables in the `exception` parameter. 
+This guarantees that only surrogate variables unrelated to the specified variables of interest are considered in the correction process.
+
+## Estimation of white blood cell composition
+
+The methylation landscape can vary significantly depending on the tissue type. 
+In particular, when samples are obtained from blood, variations in the composition of white blood cells among samples can confound the results.
+`MethylCallR` estimates the proportion of white blood cells in each sample using the reference-based cell composition estimation algorithm (`FlowSorted.EPIC.Blood` R package) (Salas et al., 2018).
+
+By setting the `adjust` argument to `TRUE`, the results will be adjusted based on the estimated cell composition derived from the methylation level matrix provided in the `meth` argument.
+
+In this example, we will use the reference from peripheral blood.
+
+```{r Chunk8, include=FALSE}
+data.cellcomp <- MeCall.CellComp(data = data.filtered, meth = data.rmbatch$methylation.level, processMethod = "preprocessNoob", CellType = "Blood", Reference = NULL, adjust = TRUE, return.All = FALSE, arraytype = "EPICv2")
+```
+
+```{r Chunk8-1, include=FALSE}
+data.cellcomp[1:4,1:4]
+#                PREC_500_1 PREC_250_1 PREC_125_1 LNCAP_500_1
+#cg25324105_BC11 0.16500860 0.13706535 0.15019249  0.21258945
+#cg25383568_TC11 0.86241055 0.87334982 0.87809590  0.85659396
+#cg25455143_BC11 0.02772629 0.02630275 0.02471420  0.02545462
+#cg25459778_BC11 0.02800380 0.02789413 0.02474286  0.03114294
+```
+
+In addition to blood samples, `MethylCallR` can also estimate and adjust the cell composition of methylation data obtained from solid samples. 
+It utilizes reference files included in the `EpiSCOR`E and `deconvR` R packages to estimate cell proportions (Teschendorff AE et al., 2020; Moss J et al., 2018). 
+Below are the types of samples available for each method:
+
+EpiSCORE ->  "Bladder", "Brain", "Breast","Colon", "Esophagus", "Heart","Kidney","Liver","Lung","Pancreas","Prostate","Skin","Olfactory epithelium"
+
+deconvR -> 'Erythrocyte_progenitors', 'Adipocytes', 'Neuron', 'Hepatocytes', 'Lung', 'Pancreas', 'Vascular', 'Colon', 'Left atrium', 'Bladder', 'Breast', 'Larynx', 'Kidney', 'Prostate', 'Thyroid', 'Upper Gastrointestinal', 'Cervix'
+
+```{r Chunk9, include=FALSE}
+data.cellcomp2 <- MeCall.CellComp(data = data.filtered, meth = data.rmbatch$methylation.level, processMethod = "preprocessNoob", CellType = "Breast",method = c("EpiSCORE"), Reference = NULL, adjust = TRUE, return.All = FALSE, arraytype = "EPICv2")
+```
+
+```{r Chunk9-1, include=FALSE}
+data.cellcomp2[1:4,1:4]
+#                PREC_500_1 PREC_250_1 PREC_125_1 LNCAP_500_1
+#cg25324105_BC11 0.27307270 0.28857021 0.27638922  0.19479504
+#cg25383568_TC11 0.87559589 0.88850889 0.86173390  0.92360285
+#cg25455143_BC11 0.02859752 0.02655550 0.02495642  0.02558436
+#cg25459778_BC11 0.02813531 0.02775252 0.02440219  0.03145485
+```
+
+!!NOTE!! : Currently, most reference files are based on information from the 450K or EPICv1 arrays. 
+When analyzing EPICv2 data in `MethylCallR`, the data is converted to a virtual array of EPICv1 to apply the reference files. 
+Since cell composition is estimated using only the common probes between EPICv1 and EPICv2, the accuracy of cell proportion estimation may be compromised.
+
+To address this, `MethylCallR` offers users the option to input their own cell composition data for correction. 
+To utilize this option, set the `method` argument to `"manual"` and provide a data frame that contains the methylation signatures for each cell type in the `Reference` parameter. 
+For further details, please refer to the documentation for the `deconvolute()` function in the `deconveR` R package (Moss J et al., 2018).
+
+## Considering covariates for EWAS
+
+Before performing EWAS, users may want to create a model matrix to account for covariates.
+
+```{r Chunk10, include=FALSE}
+data.design <- MeCall.MakeModelMatrix(pd = data.rmbatch$modified.pd, covariate = NULL, interest = "Tissue_type", PCA.result = NULL, n.pc = 2, Cell.comp = NULL, celltypes = NULL, adjustment=FALSE, meth=NULL)
+```
+
+```{r Chunk10-1, include=FALSE}
+head(data.design)
+#            (Intercept) Tissue_typeCase
+#PREC_500_1            1               0
+#PREC_250_1            1               0
+#PREC_125_1            1               0
+#LNCAP_500_1           1               0
+#LNCAP_125_1           1               0
+#SYN_12543             1               1
+```
+
+## Differential methylation analysis
+
+`MethylCallR` can identify CpG sites and regions where methylation levels significantly differ between the two groups based on the variable of interest.
+
+Differential methylation probes(DMPs) were identified by using the `limma` R package (Ritchie et al., 2015).
+
+```{r Chunk11, include=FALSE}
+data.DMP <- MeCall.DMP(meth = data.cellcomp, pd = data.rmbatch, interest = "Tissue_type", design = data.design, cutoff.P=1, multi.P = 'BH', arraytype="EPICv2")
+```
+
+```{r Chunk11-1, include=FALSE}
+dim(data.DMP@Main.info)
+#[1] 792736     15
+
+ head(data.DMP@Main.info)
+#                     CpGid   Chr  Position strand  gene functional.region
+#cg06491590_BC21 cg06491590  chr7   4815775      R                        
+#cg21316960_TC21 cg21316960  chr3 114608384      F                        
+#cg16949584_TC21 cg16949584 chr10 133523925      F                        
+#cg16614102_TC21 cg16614102 chr11  73479028      R                        
+#cg26348348_BC11 cg26348348  chr2 132671420      R LYPD1              5UTR
+#cg25468450_TC21 cg25468450 chr16  69134000      R CHTF8           TSS1500
+#                CGI.region  deltabeta        t            p adjusted.p
+#cg06491590_BC21    N_Shore 0.13950209 3.823196 0.0004898525  0.2678889
+#cg21316960_TC21            0.19219705 3.678100 0.0007440676  0.2678889
+#cg16949584_TC21    S_Shelf 0.11941554 3.547242 0.0010793946  0.2678889
+#cg16614102_TC21            0.09191207 3.514274 0.0011845132  0.2678889
+#cg26348348_BC11    S_Shore 0.17324472 3.478822 0.0013085146  0.2678889
+#cg25468450_TC21    S_Shore 0.13197895 3.421132 0.0015373538  0.2678889
+#                  AveMeth          B
+#cg06491590_BC21 0.3096401 -0.6457084
+#cg21316960_TC21 0.3895363 -1.0448338
+#cg16949584_TC21 0.3133829 -1.3987013
+#cg16614102_TC21 0.1551164 -1.4868835
+#cg26348348_BC11 0.4202799 -1.5812557
+#cg25468450_TC21 0.3601691 -1.7337981
+#                                                                                                                                                                                                                                         SNP_ID
+#cg06491590_BC21 rs1008383537;rs1037226010;rs1192687774;rs1200447978;rs1334039523;rs1341746014;rs1387561;rs141529473;rs1445513705;rs1449732657;rs1462995832;rs1562433858;rs374464510;rs563754446;rs771675875;rs888739141;rs901252837;rs903263535
+#cg21316960_TC21                                                                                                       rs1181573292;rs1362386259;rs1471344832;rs551771430;rs572577086;rs75453436;rs777681826;rs958873505;rs973130450;rs990303926
+#cg16949584_TC21                                                                                      rs1169176750;rs117760397;rs1241605253;rs1299689892;rs1314878339;rs1350192178;rs1407474333;rs1451319171;rs559702193;rs950014733;rs991349287
+#cg16614102_TC21                                                   rs1029875609;rs1166672134;rs1230328088;rs1350333055;rs1417146712;rs1457374779;rs183067910;rs557755517;rs899922427;rs955596079;rs964788807;rs984787548;rs997009491;rs999079951
+#cg26348348_BC11                                                                                      rs1000241048;rs1020892931;rs1026233546;rs1166554434;rs1396628260;rs1427541045;rs144201082;rs1481964833;rs556538238;rs756993980;rs952919230
+#cg25468450_TC21                                                                                                                                                                               rs1036799149;rs1184848450;rs749253957;rs939728679
+#                                                 SNP_DISTANCE
+#cg06491590_BC21 12;14;51;8;5;40;6;0;44;2;4;19;15;32;1;3;29;10
+#cg21316960_TC21                     46;43;7;50;48;1;12;42;0;6
+#cg16949584_TC21                 0;1;17;42;31;7;14;44;18;15;46
+#cg16614102_TC21        19;47;0;44;48;43;9;40;10;24;22;1;17;27
+#cg26348348_BC11               0;48;15;24;17;29;40;39;18;36;32
+#cg25468450_TC21                                    47;20;1;39
+```
+
+!!NOTE!! : The `MeCall.Power` function, which assists in setting the delta-beta cutoff, calculates statistical power through the `pwrEWAS` R package (Graw et al., 2019). 
+The `pwrEWAS` performs simulations based on reference data under specified experimental conditions to compute statistical power. 
+However, this reference data is not compatible with EPICv2. 
+Therefore, if users analyze EPICv2 data without converting it to an array, users will be unable to calculate statistical power.
+We plan to add methods for calculating statistical power in future updates.
+
+`MethylCallR` includes algorithms for detecting changes not only at the single CpG level but also at the regional level. 
+The following four algorithms are available for use in `MethylCallR`:
+1. "bumphunter" (Jaffe et al., 2012)
+2. "seqlm" (Kolde et al., 2016)
+3. "dmrff" (Suderman et al., 2018)
+4. "DMRcate" (Peters et al., 2015)
+
+Users can input the interested algorithm into the `method` argument and adjust the associated parameters to calculate the results. 
+For descriptions of the relevant parameters, please refer to the function's documentation (`?MeCall.DMR`).
+
+```{r Chunk12, include=FALSE}
+data.DMR <- MeCall.DMR(meth = data.cellcomp, pd = data.rmbatch$modified.pd, interest="Tissue_type", covariate = NULL, arraytype = c("EPICv2"), method = c("bumphunter"), adjPvalDmr=1, nProbes=2, probe_gap = NULL, cutoff = NULL, pickCutoff = TRUE, pickCutoffQ = 0.95, smooth=TRUE, smoothFunction=loessByCluster, useWeights=FALSE, B=100, nullMethod="bootstrap")
+```
+
+```{r Chunk12-1, include=FALSE}
+head(data.DMR)
+#                seqnames     start       end width     value     area cluster
+#cg16753409_TC11     chr6  31862623  31863160   537 -3.294304 42.82596  402048
+#cg15855900_TC11    chr16  66844178  66844968   790 -3.959415 39.59415  184091
+#cg00733516_TC11     chr7  99558050  99559436  1386 -3.428159 37.70975  437180
+#cg20387815_TC11     chr2  25168173  25169042   869 -3.573767 35.73767  251645
+#cg26721264_TC11    chr18  77249044  77250177  1133 -2.593533 31.12240  225447
+#cg25599538_BC11     chr4 140568913 140569274   361 -4.314036 30.19825  362935
+#                indexStart indexEnd      L clusterL     p.value fwer
+#cg16753409_TC11      15652   181128 165477       13 0.009292905 0.44
+#cg15855900_TC11       8864   199145 190282       10 0.002889140 0.22
+#cg00733516_TC11      15871   385989 370119       11 0.001191398 0.24
+#cg20387815_TC11       1249   148083 146835       10 0.007744088 0.43
+#cg26721264_TC11       6520   220192 213673       12 0.014207422 0.61
+#cg25599538_BC11        563    87878  87316        7 0.003872044 0.26
+#                p.valueArea fwerArea
+#cg16753409_TC11 0.001280753     0.16
+#cg15855900_TC11 0.002204086     0.23
+#cg00733516_TC11 0.002621076     0.29
+#cg20387815_TC11 0.003395485     0.34
+#cg26721264_TC11 0.006493120     0.48
+#cg25599538_BC11 0.007476023     0.51
+```
+
+To use `DMRcate`, ensure that you have version 3.0.0 or a higher version installed.
+
+`Combine-pvalues` is an algorithm for identifying Differentially methylated regions (DMRs) and is based on the Python language ((Pedersen et al., 2012). 
+By setting the `method` argument to `"combP"`, the output will include an input file and a guide for `Combine-pvalues`, rather than the results of the DMR calculations.
+
+```{r Chunk13, include=FALSE}
+data.DMR2 <- MeCall.DMR(meth = data.cellcomp, pd = data.rmbatch$modified.pd, interest="Tissue_type", covariate = NULL, arraytype = c("EPICv2"), method = c("combP"), adjPvalDmr=1, nProbes=2, probe_gap = NULL)
+```
+
+```{r Chunk13-1, include=FALSE}
+str(data.DMR2)
+#'data.frame':	792736 obs. of  4 variables:
+# $ CHR  : chr  "chr1" "chr1" "chr1" "chr1" ...
+# $ START: chr  "10001646" "100028978" "100029214" "100029397" ...
+# $ END  : chr  "10001647" "100028979" "100029215" "100029398" ...
+# $ Pval : chr  "0.269536058004058" "0.045735612244477" "0.0234223660930132" "0.0315501963118983" ...
+```
+
+
+## Summary plot of EWAS
+
+`MethylCallR` can generate high-quality plots for publication that summarize the identified DMP results. 
+Four different summary plots are available, and they can be easily generated by specifying the desired plot type in the `type` parameter.
+1. "Manhattan"
+2. "Volcano"
+3. "functional.region"
+4. "CGI.region"
+
+Each plot is generated using `ggplot2` (Wickham, 2009).
+
+Users can highlight multiple groups of CpG sites by providing a list object that contains the IDs of the CpG sites they wish to highlight. 
+Additionally, gene annotations associated with the CpG sites can be included in the plots.
+
+In this example, the cutoff values (`Pval.cut` and `delta.cut`) were chosen arbitrarily to show the results.
+
+```{r Chunk14, include=FALSE}
+highlist_1 <- rownames(data.DMP@Main.info[c(1:20),])
+highlist_2 <- rownames(data.DMP@Main.info[c(35:50),])
+highlist_3 <- rownames(data.DMP@Main.info[c(80:100),])
+
+highlight_lists <- list(highlist_1 = highlist_1, highlist_2 = highlist_2, highlist_3 = highlist_3)
+
+highlight.color = c("green","blue","red")
+
+gene.label = c(highlist_1, highlist_3)
+
+data.Man <- MeCall.Plot(data = data.DMP, type = c("Manhattan"), pd= data.rmbatch$modified.pd, Pval.cut = 0.2, highlight=highlight_lists, highlight.color = c("green","blue","red"),gene.label = gene.label)
+```
+
+```{r Chunk14-1, include=FALSE}
+data.Man
+```
+
+```{r Chunk15, include=FALSE}
+data.Vol <- MeCall.Plot(data = data.DMP, type = c("Volcano"), pd= data.rmbatch$modified.pd, Pval.cut = 0.5, delta.cut = c(-0.1,0.1) ,gene.label = gene.label)
+```
+
+```{r Chunk15-1, include=FALSE}
+data.Vol
+```
+
+
+## Functional enrichment analysis
+
+To identify which gene set is over-represented in the gene list associated with DMPs, functional enrichment analysis can be performed using the `gometh` algorithm (Maksimovic et al., 2021).
+`MethylCallR` returns a summarized data frame object containing significantly over-represented gene sets based on the gene ontology (GO) and kyoto encyclopedia of genes and genomes (KEGG) databases (Ashburner et al., 2000; Kanehisa and Goto, 2000).
+
+In this example, the cutoff values (`DMP.cutoff` and `Delta.Beta`) were chosen arbitrarily for fast execution of the function.
+
+```{r Chunk16, include=FALSE}
+data.enrich <- MeCall.Enrichment(DMP.object = data.DMP, DMP.cutoff = 0.27, DMP.multi = "BH", Delta.Beta = c(-0.24,0.24), genomic.features = c("ALL"), Enrich.cutoff = 1, Enrich.multi = c("BH"),min.count = 2 ,minfi.object.EPICv2 = data.Import)
+```
+
+```{r Chunk16-1, include=FALSE}
+ head(data.enrich)
+#               Category         ID
+#1 GO-Biological Process GO:0021936
+#2 GO-Biological Process GO:0021534
+#3 GO-Biological Process GO:0021924
+#4 GO-Biological Process GO:0021930
+#5          KEGG Pathway   hsa04340
+#                                                    Description
+#1 regulation of cerebellar granule cell precursor proliferation
+#2                               cell proliferation in hindbrain
+#3                  cell proliferation in external granule layer
+#4               cerebellar granule cell precursor proliferation
+#5                                    Hedgehog signaling pathway
+#  Gene_in_description Gene_Count      p_value       FDR Significant_gene
+#1                  11          3 1.270504e-05 0.2305354   CEND1,LHX5,SMO
+#2                  16          3 4.083343e-05 0.2305354   CEND1,LHX5,SMO
+#3                  16          3 4.083343e-05 0.2305354   CEND1,LHX5,SMO
+#4                  16          3 4.083343e-05 0.2305354   CEND1,LHX5,SMO
+#5                  56          3 1.527161e-03 0.5497778    EVC,PTCH1,SMO
+```
+
+
+## Copy number analysis
+
+DNA copy number can be estimated using methylation signal intensity values.
+
+`MethylCallR` integrates data preprocessing and copy number estimation (circular binary segmentation) (Tian et al., 2017; Olshen et al., 2004). 
+After this process, it returns a list object containing the input files required for `GISTIC2.0`, an algorithm designed to identify focal recurrent alterations (Mermel et al., 2011).
+Users can save this object for direct use with the `GISTIC2.0` algorithm.
+
+```{r Chunk17, include=FALSE}
+data.CNA <- MeCall.CNV(data = data.filtered, interest = "Tissue_type", batch = NULL, arraytype="EPICv2", outdir=NULL, intercept = TRUE)
+```
+
+```{r Chunk17-1, include=FALSE}
+str(data.CNA)
+#List of 2
+# $ Segment.data:'data.frame':	7311 obs. of  6 variables:
+#  ..$ ID       : chr [1:7311] "SYN_12543" "SYN_12543" "SYN_12543" "SYN_12543" ...
+#  ..$ chrom    : num [1:7311] 1 1 1 1 1 1 1 1 1 1 ...
+#  ..$ loc.start: int [1:7311] 69591 935411 936855 1232656 1234689 1246576 1247278 2529839 2530925 6603704 ...
+#  ..$ loc.end  : int [1:7311] 933966 936600 1232117 1234014 1246389 1247044 2529322 2530490 6603604 6604208 ...
+#  ..$ num.mark : num [1:7311] 86 8 648 7 23 ...
+#  ..$ seg.mean : num [1:7311] 0.0357 0.4497 -0.011 0.3914 -0.0639 ...
+# $ Marker.data :'data.frame':	792736 obs. of  2 variables:
+#  ..$ CHR    : num [1:792736] 1 1 1 1 1 1 1 1 1 1 ...
+#  ..$ MAPINFO: int [1:792736] 69591 605420 777872 777913 817316 841597 860948 864703 865910 870161 ...
+```
+
+Alternatively, if users specify a path in the `outdir` parameter, the results of the function will be automatically saved to the specified location.
+
+
+## References
+Ashburner,M. et al. (2000) Gene Ontology: tool for the unification of biology. Nat. Genet., 25, 25–29.
+
+Fortin,J.-P. et al. (2014) Functional normalization of 450k methylation array data improves replication in large cancer studies. Genome Biol., 15, 503.
+
+Graw,S. et al. (2019) pwrEWAS: a user-friendly tool for comprehensive power estimation for epigenome wide association studies (EWAS). BMC Bioinformatics, 20, 218.
+
+Jaffe,A.E. et al. (2012) Bump hunting to identify differentially methylated regions in epigenetic epidemiology studies. Int. J. Epidemiol., 41, 200–209.
+
+Johnson,W.E. et al. (2007) Adjusting batch effects in microarray expression data using empirical Bayes methods. Biostatistics, 8, 118–127.
+
+Kanehisa,M. and Goto,S. (2000) KEGG: Kyoto Encyclopedia of Genes and Genomes. Nucleic Acids Res., 28, 27–30.
+
+Kolde,R. et al. (2016) seqlm: an MDL based method for identifying differentially methylated regions in high density methylation array data. Bioinformatics, 32, 2604–2610.
+
+Leek,J.T. and Storey,J.D. (2007) Capturing Heterogeneity in Gene Expression Studies by Surrogate Variable Analysis. PLOS Genet., 3, e161.
+
+Mahalanobis,P.C. (1936) On the generalized distance in Statistics.
+
+Maksimovic,J. et al. (2021) Gene set enrichment analysis for genome-wide DNA methylation data. Genome Biol., 22, 173.
+
+Maksimovic,J. et al. (2012) SWAN: Subset-quantile Within Array Normalization for Illumina Infinium HumanMethylation450 BeadChips. Genome Biol., 13, R44.
+
+Mermel,C.H. et al. (2011) GISTIC2.0 facilitates sensitive and confident localization of the targets of focal somatic copy-number alteration in human cancers. Genome Biol., 12, R41.
+
+Moss,J. et al. (2018) Comprehensive human cell-type methylation atlas reveals origins of circulating cell-free DNA in health and disease. Nat. Commun., 9, 5068.
+
+Olshen,A.B. et al. (2004) Circular binary segmentation for the analysis of array‐based DNA copy number data. Biostatistics, 5, 557–572.
+
+Pedersen,B.S. et al. (2012) Comb-p: software for combining, analyzing, grouping and correcting spatially correlated P-values. Bioinformatics, 28, 2986–2988.
+
+Peters,T.J. et al. (2024) Characterisation and reproducibility of the HumanMethylationEPIC v2.0 BeadChip for DNA methylation profiling. BMC Genomics, 25, 251.
+
+Peters,T.J. et al. (2015) De novo identification of differentially methylated regions in the human genome. Epigenetics Chromatin, 8, 6.
+
+Pidsley,R. et al. (2013) A data-driven approach to preprocessing Illumina 450K methylation array data. BMC Genomics, 14, 293.
+
+Ritchie,M.E. et al. (2015) limma powers differential expression analyses for RNA-sequencing and microarray studies. Nucleic Acids Res., 43, e47.
+
+Smith,M.L. et al. (2013) illuminaio: An open source IDAT parsing tool for Illumina microarrays. F1000Research, 2, 264.
+
+Suderman,M. et al. (2018) dmrff: identifying differentially methylated regions efficiently with power and control. 508556.
+
+Teschendorff,A.E. et al. (2013) A beta-mixture quantile normalization method for correcting probe design bias in Illumina Infinium 450 k DNA methylation data. Bioinformatics, 29, 189–196.
+
+Teschendorff,A.E. et al. (2020) EPISCORE: cell type deconvolution of bulk tissue DNA methylomes from single-cell RNA-Seq data. Genome Biol., 21, 1–33.
+
+Tian,Y. et al. (2017) ChAMP: updated methylation analysis pipeline for Illumina BeadChips. Bioinformatics, 33, 3982–3984.
+
+Triche,T.J.,Jr et al. (2013) Low-level processing of Illumina Infinium DNA Methylation BeadArrays. Nucleic Acids Res., 41, e90.
+
+Wang,Y. et al. (2022) InterpolatedXY: a two-step strategy to normalize DNA methylation microarray data avoiding sex bias. Bioinformatics, 38, 3950–3957.
+
+Wickham,H. (2009) ggplot2: Elegant Graphics for Data Analysis Springer, New York, NY.
+
+Xu,Z. et al. (2016) ENmix: a novel background correction method for Illumina HumanMethylation450 BeadChip. Nucleic Acids Res., 44, e20.
+
+
+
+

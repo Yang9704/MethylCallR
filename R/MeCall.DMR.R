@@ -182,6 +182,7 @@ Bumps <- bumphunter::bumphunter(Y, design=X, chr=Bump.Anno.CHR, pos=Bump.Anno.Po
 
 DMRs <- subset(Bumps$table, p.valueArea <= adjPvalDmr)
 DMRs <- DMRs[order(DMRs$p.valueArea),]
+rownames(DMRs) <- paste("DMR",1:nrow(DMRs),sep="_")
 DMRobjs <- data.frame(DMRs[,1:3],width=DMRs[,3]-DMRs[,2],DMRs[,4:14])
 colnames(DMRobjs)[1:3] <- c("seqnames","start","end")
 message("\n[MeCall]-[NOTICE] : Bumphunter algorithm finished.")
@@ -211,7 +212,7 @@ mani[which(mani$Strand_FR == "R"),]$Strand_FR <- "-"
 mani[which(mani$Strand_FR == "0"),]$Strand_FR <- "*"
 
 GRange.colnm.idx1 <- c(5,7,8) 
-GRange.colnm.idx2 <- c(9,13,10,1) 
+GRange.colnm.idx2 <- c(9,12,10,1) 
 GRange.df <- mani[,GRange.colnm.idx1]
 GRange.sup.info <- mani[,GRange.colnm.idx2]
 colnames(GRange.sup.info) <- c("Genomic.featrue","CGI.feature","gene","CpGid")
@@ -237,6 +238,7 @@ message("\n[MeCall]-[NOTICE] : Calculate seqlm segmentation ")
 segments = seqlm::seqlm(values = meth, genome_information = seqlm_anno, annotation = Group.Var, max_block_length=max_block_length, max_dist=probe_gap)
 seqlmDMR <- as.data.frame(segments@elementMetadata@listData)
 DMRobjs <- seqlmDMR[which(seqlmDMR$fdr <= adjPvalDmr & seqlmDMR$length >= nProbes),]
+rownames(DMRobjs) <- paste("DMR",1:nrow(DMRobjs),sep="_")
 message("\n[MeCall]-[NOTICE] : Seqlm algorithm Done.")
 
 }
@@ -288,6 +290,8 @@ dmrs <- dmrff::dmrff(estimate=stats$estimate, se=stats$se, p.value=stats$p.value
 message("\n[MeCall]-[NOTICE] : dmrff algorithm Done.")
 
 DMRobjs <- dmrs[which(dmrs$p.adjust <= adjPvalDmr & dmrs$n >= nProbes),]
+DMRobjs <- DMRobjs[order(DMRobjs$p.value),]
+rownames(DMRobjs) <- paste("DMR",1:nrow(DMRobjs),sep="_")
 }
 
 if(method == "DMRcate"){

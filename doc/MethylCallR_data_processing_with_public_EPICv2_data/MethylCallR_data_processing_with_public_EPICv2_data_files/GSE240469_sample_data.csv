@@ -1,0 +1,41 @@
+Sample_Name,Slide,array,Cell_type,Tissue_type
+PREC_500_1,GSM7698435,,PrEC cells,Cell line
+PREC_250_1,GSM7698436,,PrEC cells,Cell line
+PREC_125_1,GSM7698437,,PrEC cells,Cell line
+LNCAP_500_1,GSM7698438,,LNCaP cells,Cell line
+LNCAP_250_1,GSM7698439,,LNCaP cells,Cell line
+LNCAP_125_1,GSM7698440,,LNCaP cells,Cell line
+SYN_12543,GSM7698441,,Prostate tumour,Prostate tumour
+SYN_10651,GSM7698442,,Prostate tumour,Prostate tumour
+PREC_500_2,GSM7698443,,PrEC cells,Cell line
+PREC_250_2,GSM7698444,,PrEC cells,Cell line
+PREC_125_2,GSM7698445,,PrEC cells,Cell line
+LNCAP_500_2,GSM7698446,,LNCaP cells,Cell line
+LNCAP_250_2,GSM7698447,,LNCaP cells,Cell line
+LNCAP_125_2,GSM7698448,,LNCaP cells,Cell line
+SYN_5656,GSM7698449,,Prostate tumour,Prostate tumour
+SYN_16599,GSM7698450,,Prostate tumour,Prostate tumour
+MCF7,GSM7698451,,MCF7 cells,Cell line
+TAMR,GSM7698452,,TAMR cells,Cell line
+TAMR_Decitabine_Day7_1,GSM7698453,,TAMR cells,Cell line
+TAMR_Control_2,GSM7698454,,TAMR cells,Cell line
+TAMR_Decitabine_Recovery_1,GSM7698455,,TAMR cells,Cell line
+TAMR_Control_1,GSM7698456,,TAMR cells,Cell line
+TAMR_Decitabine_Recovery_2,GSM7698457,,TAMR cells,Cell line
+TAMR_Decitabine_Day7_2,GSM7698458,,TAMR cells,Cell line
+PREC_500_3,GSM7698459,,PrEC cells,Cell line
+PREC_250_3,GSM7698460,,PrEC cells,Cell line
+PREC_125_3,GSM7698461,,PrEC cells,Cell line
+LNCAP_500_3,GSM7698462,,LNCaP cells,Cell line
+LNCAP_250_3,GSM7698463,,LNCaP cells,Cell line
+LNCAP_125_3,GSM7698464,,LNCaP cells,Cell line
+SYN_11452,GSM7698465,,Prostate tumour,Prostate tumour
+SYN_15917,GSM7698466,,Prostate tumour,Prostate tumour
+HCI-005_Decitabine_1,GSM7698467,,Breast tumour PDX,Breast cancer PDX model HCI-005
+HCI-005_Decitabine_3,GSM7698468,,Breast tumour PDX,Breast cancer PDX model HCI-005
+HCI-005_Vehicle_1,GSM7698469,,Breast tumour PDX,Breast cancer PDX model HCI-005
+HCI-005_Vehicle_2,GSM7698470,,Breast tumour PDX,Breast cancer PDX model HCI-005
+Gar15-13_Decitabine_2,GSM7698471,,Breast tumour PDX,Breast cancer PDX model Gar15-13
+Gar15-13_Vehicle_3,GSM7698472,,Breast tumour PDX,Breast cancer PDX model Gar15-13
+Gar15-13_Vehicle_4,GSM7698473,,Breast tumour PDX,Breast cancer PDX model Gar15-13
+Gar15-13_Decitabine_1,GSM7698474,,Breast tumour PDX,Breast cancer PDX model Gar15-13

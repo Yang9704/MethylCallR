@@ -170,10 +170,10 @@ data.norm <- MeCall.Norm(data = data.filtered, method = c("BMIQ"), InterpolatedX
 ```
 
 ```{r Chunk6-1, include=FALSE}
-dim(data.norm)
+dim(data.norm$beta)
 #[1] 759193    454
 
-data.norm[1:4,1:4]
+data.norm$beta[1:4,1:4]
 #           Negative77 Negative124 Positive155 Positive139
 #cg07881041 0.95780049  0.94945522  0.94256803  0.95737970
 #cg23229610 0.95285808  0.94637172  0.95026121  0.96198183
@@ -187,7 +187,7 @@ data.norm[1:4,1:4]
 Potential outliers for each group were detected by using the Mahalanobis distance (Mahalanobis, 1936). The `Plot` parameter was set to `TRUE` to save the PCA plot, which visualizes sample distribution and the boundary of outlier.
 
 ```{r Chunk7, include=FALSE}
-Outlier <- MeCall.Outlier(meth = data.norm, pd = data.filtered$pd, group = "Group", nrep = 1000, sample.fraction = 0.9, conf = 0.999, n.component = 2,  plot=TRUE)
+Outlier <- MeCall.Outlier(meth = data.norm$beta, pd = data.filtered$pd, group = "Group", nrep = 1000, sample.fraction = 0.9, conf = 0.999, n.component = 2,  plot=TRUE)
 ```
 
 Since 2 samples were detected as outlier in a high ratio (> 20%), these samples were designated as the "Obvious outlier"
@@ -210,9 +210,9 @@ Outlier$Plot
 Downstream analyses were performed after removing 2 outliers.
 
 ```{r Chunk8, include=FALSE}
-Remaineds <- setdiff(colnames(data.norm), Outlier[[1]])
+Remaineds <- setdiff(colnames(data.norm$beta), Outlier[[1]])
 data.filtered$pd <- data.filtered$pd[Remaineds,]
-data.norm <- data.norm[,Remaineds]
+data.norm$beta <- data.norm$beta[,Remaineds]
 ```
 
 
@@ -221,7 +221,7 @@ data.norm <- data.norm[,Remaineds]
 The effect of batches and covariates on DNA methylation can be assessed by estimating the correlation between DNA methylation data and variables in the sample data file. This function returns heatmap plot based on the `ggplot2` R package (Wickham, 2009).
 
 ```{r Chunk9, include=FALSE}
-data.Heatmap <- MeCall.FindBatch(meth = data.norm, pd = data.filtered$pd, batches = NULL, n.comp = 0)
+data.Heatmap <- MeCall.FindBatch(meth = data.norm$beta, pd = data.filtered$pd, batches = NULL, n.comp = 0)
 ```
 
 The significant correlations were highlighted as blue tiles. Darker blue tiles indicate a lower p-value. Spearman's correlation coefficient was represented at the center of each tile.
@@ -241,7 +241,7 @@ Known technical batch effects could be addressed using the `ComBat` algorithm (J
 data.filtered$pd$Sentrix_ID_Original <- as.factor(data.filtered$pd$Sentrix_ID_Original)
 data.filtered$pd$Sentrix_Position_original <- as.factor(data.filtered$pd$Sentrix_Position_original)
 
-data.combat <- MeCall.RemoveBatch(meth = data.norm, pd = data.filtered$pd, batches=c("Sentrix_Position_original","Sentrix_ID_Original"), interest="Group", do.sva= FALSE, exception = NULL)
+data.combat <- MeCall.RemoveBatch(meth = data.norm$beta, pd = data.filtered$pd, batches=c("Sentrix_Position_original","Sentrix_ID_Original"), interest="Group", do.sva= FALSE, exception = NULL)
 ```
 
 ```{r Chunk10-1, include=FALSE}
@@ -586,7 +586,7 @@ Wickham,H. (2009) ggplot2: Elegant Graphics for Data Analysis Springer, New York
 
 ## Sessioninfo
 ```{r Chunk25, include=FALSE}
-> sessionInfo()
+sessionInfo()
 #R version 4.3.3 (2024-02-29)
 #Platform: x86_64-pc-linux-gnu (64-bit)
 #Running under: Ubuntu 20.04.6 LTS
