@@ -194,7 +194,7 @@ if(method == "seqlm"){
 if(!requireNamespace("seqlm", quietly = TRUE)){
 stop("\n[MeCall]-!!ERROR!! : [seqlm] R package is not founded in your R environment. Please load [seqlm] R package to run this function using seqlm method {library(seqlm)}. You can download [seqlm] R package at following github page : https://github.com/raivokolde/seqlm")
 }
-message("\n[mkk]-[NOTICE] : Start seqlm algorithm.")
+message("\n[MeCall]-[NOTICE] : Start seqlm algorithm.")
 
 if(!is.null(covariate)){
 message("\n[MeCall]-[NOTICE] : Methylation level will be adjusted using linear regression model before applying seqlm algorithm.")

@@ -52,7 +52,7 @@
 MeCall.Outlier <- function(meth = norm, pd = filtered$pd ,group = NULL ,nrep=1000, sample.fraction = 0.9, conf= 0.999, n.component =2 ,plot = FALSE){
 
 if(is.null(meth)){stop("\n[MeCall]-!!ERROR!! : Data is not exist.")
-}else if(!is.matrix(meth)){stop("\n[mkk]-!!ERROR!! : Data format should be matrix. Please check your input data.")
+}else if(!is.matrix(meth)){stop("\n[MeCall]-!!ERROR!! : Data format should be matrix. Please check your input data.")
 }else{data <- meth}
   
 if(!group %in% colnames(pd)){stop("\n[MeCall]-!!ERROR!! : There is no group variable in your pd parameter.")
