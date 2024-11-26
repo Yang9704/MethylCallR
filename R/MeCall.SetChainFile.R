@@ -59,10 +59,10 @@ Warning.vec <- paste(lists1, collapse= ", ")
 if(auto.remove){
 message("\n[MeCall]-[NOTICE] : auto.remove == TRUE. Code will be remove Remained duplicated probe sets based on the pre-set data implemented in MethylCallR.")
 MethylCallR_preset <- Duplicated.Probes.preset
-Add.probes <- intersect(unlist(DUP.check), MethylCallR_preset)
-Empty.m <- matrix(NA, ncol= ncol(remove.list), nrow = length(Add.probes))
-rownames(Empty.m) <- Add.probes
-remove.list <- rbind(remove.list, Empty.m)
+Add.probes <- intersect(unlist(DUP.check), rownames(MethylCallR_preset))
+manis <- callmanifest("EPICv2")
+Add.probes.sub <- manis[Add.probes,]
+remove.list <- rbind(remove.list, Add.probes.sub)
 }else{
 stop("\n[MeCall]-!!ERROR!! : There are ",length(lists1)," duplicated probe sets : ", Warning.vec, ". Please check again.")}
 }else{
@@ -75,8 +75,8 @@ if(!global.env){
 Return.obj <- list(Duplicated.Probes.preset = remove.list, Address_chain_file = address_chain_file)
 return(Return.obj)}
 
-Duplicated.Probes.preset <<- remove.list
-Address_chain_file <<- address_chain_file
+assign("Duplicated.Probes.preset", remove.list,.GlobalEnv)
+assign("Address_chain_file", address_chain_file,.GlobalEnv)
 }
 
 
