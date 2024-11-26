@@ -29,9 +29,9 @@ A list object containing basic informations to process methylation microarray :
 \itemize{Unmeth} {An unmethylated intensity matrix structured similarly to a beta-value matrix}
 \itemize{detP} {A detection P-value matrix structured similarly to a beta-value matrix}
 \itemize{B.count} {A bead count matrix structured similarly to a beta-value matrix}
-*\itemize{pd} {A data frame composed of sample metadata, which includes information about each sample}
-\itemize{minfi.Set} {A vector consisting of strings that indicate the version of the microarray}
-\itemize{beta} {A list object consisting of two minfi objects (RGChannelSet Set and MethylSet)}
+\itemize{pd} {A data frame composed of sample metadata, which includes information about each sample}
+\itemize{TAG} {A vector consisting of strings that indicate the version of the microarray}
+\itemize{minfi.Set} {A list object consisting of two minfi objects (RGChannelSet Set and MethylSet)}
 }
 \description{
 \code{MeCall.ReadIdat()} will attempt to find IDAT files located
