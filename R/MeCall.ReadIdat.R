@@ -100,10 +100,10 @@ Grnlist <- list.files(idat.dir,pattern='Grn')
 Redlist <- list.files(idat.dir,pattern='Red')
 
 for(i in 1:length(IDATnm)){
-if(table(str_detect(Grnlist, pattern = IDATnm[i]))[2]==0){
-stop("\n[MeCall]-!!ERROR!! : There is no related Grn_IDAT file in IDAT directory. Check this sample which is contained sample table file : ",IDATnm[i])}
-if(table(str_detect(Redlist, pattern = IDATnm[i]))[2]==0){
-stop("\n[MeCall]-!!ERROR!! : There is no related Red_IDAT file in IDAT directory. Check this sample which is contained sample table file : ",IDATnm[i])}}
+if(!any(str_detect(Grnlist, pattern = IDATnm[i]))){
+stop("\n[MeCall]-!!ERROR!! : There is no related Grn_IDAT file in IDAT directory. Check this sample which is contained in sample table file : ",IDATnm[i])}
+if(!any(str_detect(Redlist, pattern = IDATnm[i]))){
+stop("\n[MeCall]-!!ERROR!! : There is no related Red_IDAT file in IDAT directory. Check this sample which is contained in sample table file : ",IDATnm[i])}}
 message("\n[MeCall]-[notice] : Check matching Done. MethylCallR found ",length(IDATnm)," IDAT files.")
 
 message("\n[MeCall]-[notice] : Loading IDAT files.")
