@@ -285,6 +285,15 @@ names(CHRs) <- rownames(stats)
 names(Pos) <- rownames(stats)
 }
 
+if(sum(is.na(CHRs)) > 0){
+stop("\n[MeCall]-[NOTICE] : There are probes with invalid chromosome. It is recommended to remove these probes for segmentation.")
+}
+
+
+if(sum(is.na(Pos)) > 0){
+stop("\n[MeCall]-[NOTICE] : There are probes with invalid position. It is recommended to remove these probes for segmentation.")
+}
+  
 dmrs <- dmrff::dmrff(estimate=stats$estimate, se=stats$se, p.value=stats$p.value, methylation=meth, chr=CHRs, pos=Pos, maxgap=probe_gap, verbose=T)
 
 message("\n[MeCall]-[NOTICE] : dmrff algorithm Done.")
